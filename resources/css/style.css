@@ -1,0 +1,104 @@
+/* Estilos generales del cuerpo de la página */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* Contenedor principal del formulario de login */
+.login-container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+}
+
+/* Título del formulario */
+.login-container h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+}
+
+/* Clase personalizada para el título con efecto de sombra y contorno */
+.custom-title {
+    color: #28a745; /* Verde */
+    -webkit-text-stroke: 2px #ffc107; /* Amarillo */
+    text-stroke: 2px #ffc107;
+    text-shadow:
+        2px 2px 0 #ffc107,
+        -2px 2px 0 #ffc107,
+        2px -2px 0 #ffc107,
+        -2px -2px 0 #ffc107;
+}
+
+/* Grupo de cada input (label + input) */
+.input-group {
+    margin-bottom: 20px;
+}
+
+/* Estilo de las etiquetas */
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: bold;
+}
+
+/* Estilo de los campos de entrada */
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Asegura que el padding no afecte el ancho total */
+    font-size: 16px;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilo del botón de ingresar */
+.btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+/* Contenedor para el enlace de "olvidó contraseña" */
+.links {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.links a {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.links a:hover {
+    text-decoration: underline;
+}
