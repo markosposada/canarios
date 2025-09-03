@@ -109,4 +109,7 @@ Route::get('/conductores', [ConductorController::class, 'panelConductores'])->na
 //Route::post('/conductores/{id}/estado', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
 Route::get('/conductores/buscar-ajax', [ConductorController::class, 'buscarMovilAjax'])->name('conductores.buscarAjax');
 //Route::post('/conductores/actualizar-estado/{movil}', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
-Route::post('/conductores/actualizar-estado/{id}', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
+//Route::post('/conductores/actualizar-estado/{id}', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
+Route::post('/conductores/movil/{id}/estado', [ConductorController::class, 'actualizarEstado'])
+    ->name('conductores.estado');
+

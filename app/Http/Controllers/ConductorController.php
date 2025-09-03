@@ -125,35 +125,53 @@ public function buscarMovilAjax(Request $request)
     return response()->json($resultados);
 }
 
+
 public function actualizarEstado(Request $request, $id)
 {
-    \Log::info("== INICIO actualizarEstado estilo JAVA con mo_id: $id ==");
+    \Log::info("== INICIO actualizarEstado por MÓVIL con mo_id: $id ==");
 
-    $registro = DB::table('movil')->where('mo_id', $id)->first();
+    $accion = $request->input('accion', 'activar') === 'desactivar' ? 'desactivar' : 'activar';
 
-    if (!$registro) {
-        return response()->json(['success' => false]);
-    }
+    return DB::transaction(function () use ($id, $accion) {
+        // Bloqueamos el registro seleccionado
+        $registro = DB::table('movil')->where('mo_id', $id)->lockForUpdate()->first();
 
-    $carro = $registro->mo_taxi;
+        if (!$registro) {
+            \Log::warning("No existe registro movil con mo_id=$id");
+            return response()->json(['success' => false, 'message' => 'Registro no encontrado.'], 404);
+        }
 
-    // 1. Activar el registro seleccionado (si pertenece al móvil)
-    DB::table('movil')
-        ->where('mo_id', $id)
-        ->where('mo_taxi', $carro)
-        ->update(['mo_estado' => 1]);
+        $movil = $registro->mo_taxi;
 
-    // 2. Desactivar todos los demás activos de ese móvil
-    DB::table('movil')
-        ->where('mo_taxi', $carro)
-        ->where('mo_id', '!=', $id)
-        ->where('mo_estado', 1)
-        ->update(['mo_estado' => 2]);
+        // *** Regla por MÓVIL: solo un ACTIVO por mo_taxi ***
+        if ($accion === 'activar') {
+            // (1) Activar el seleccionado
+            DB::table('movil')
+                ->where('mo_id', $id)
+                ->update(['mo_estado' => 1]);
 
-    \Log::info("Activado mo_id=$id en mo_taxi=$carro y desactivados los demás");
+            // (2) Desactivar todos los demás del MISMO MÓVIL
+            DB::table('movil')
+                ->where('mo_taxi', $movil)
+                ->where('mo_id', '!=', $id)
+                ->where('mo_estado', 1)
+                ->update(['mo_estado' => 2]);
 
-    return response()->json(['success' => true]);
+            \Log::info("Activado mo_id=$id en mo_taxi=$movil; otros desactivados");
+            return response()->json(['success' => true, 'accion' => 'activar']);
+        } else {
+            // Desactivar solo este registro
+            DB::table('movil')
+                ->where('mo_id', $id)
+                ->update(['mo_estado' => 2]);
+
+            \Log::info("Desactivado mo_id=$id en mo_taxi=$movil");
+            return response()->json(['success' => true, 'accion' => 'desactivar']);
+        }
+    });
 }
+
+
 
 
 

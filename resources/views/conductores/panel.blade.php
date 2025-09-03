@@ -26,6 +26,7 @@
 </script>
 
 <script>
+    // Cargar tabla de resultados
     function cargarTabla(movil = '') {
         $.ajax({
             url: '{{ route("conductores.buscarAjax") }}',
@@ -55,8 +56,8 @@
                         const filaColor = activo ? 'table-success' : 'table-light';
 
                         const boton = activo
-                            ? `<button class="btn btn-sm btn-danger" onclick="cambiarEstado(${item.mo_id}, true)">Inactivar</button>`
-                            : `<button class="btn btn-sm btn-success" onclick="cambiarEstado(${item.mo_id}, false)">Activar</button>`;
+                            ? `<button class="btn btn-sm btn-danger" onclick="cambiarEstado(${item.mo_id}, 'desactivar')">Inactivar</button>`
+                            : `<button class="btn btn-sm btn-success" onclick="cambiarEstado(${item.mo_id}, 'activar')">Activar</button>`;
 
                         html += `<tr class="${filaColor}">
                             <td>${item.mo_taxi}</td>
@@ -77,17 +78,18 @@
         });
     }
 
-    function cambiarEstado(id, solo_inactivar = false) {
+    // Cambiar estado (activar o desactivar)
+    function cambiarEstado(id, accion) {
         $.ajax({
-            url: `/conductores/actualizar-estado/${id}`,
+            url: `/conductores/movil/${id}/estado`,
             type: 'POST',
-            data: { solo_inactivar: solo_inactivar },
+            data: { accion: accion },
             success: function(response) {
                 if (response.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Éxito',
-                        text: 'Estado actualizado correctamente',
+                        text: `Registro ${accion} correctamente`,
                         timer: 1500,
                         showConfirmButton: false
                     });
@@ -104,7 +106,7 @@
     }
 
     $(document).ready(function() {
-        cargarTabla(); // carga todos los activos al inicio
+        cargarTabla(); // carga todos los registros al inicio
 
         $('#btnBuscar').click(function() {
             const movil = $('#movil').val();
