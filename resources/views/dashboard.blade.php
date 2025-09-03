@@ -75,6 +75,16 @@
     </div>
 </div>
 
+    <div class="col-6 col-lg-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">Servicios (hoy)</div>
+          <div class="fs-3 fw-bold">--</div>
+        </div>
+      </div>
+    </div>
+
+    
 
     </div>
 </div>

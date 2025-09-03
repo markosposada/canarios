@@ -57,11 +57,14 @@ class AsignaServicioController extends Controller
         return response()->json($moviles);
     }
 
-    /** Genera token numérico de 3 dígitos (000-999), único entre tokens no vencidos */
-    private function generarTokenUnico3(): string
+    /** Genera token: 1 letra + 2 números (A00–Z99), único entre tokens no vencidos */
+    private function generarTokenUnicoMix(): string
     {
+        $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // puedes excluir letras si quieres evitar confusiones
         do {
-            $token = str_pad((string) random_int(0, 999), 3, '0', STR_PAD_LEFT);
+            $letra = $letras[random_int(0, strlen($letras) - 1)];
+            $num   = str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
+            $token = $letra . $num;
 
             $existe = DB::table('disponibles')
                 ->where('dis_token', $token)
@@ -72,7 +75,7 @@ class AsignaServicioController extends Controller
         return $token;
     }
 
-    /** Registrar servicio + token */
+    /** Registrar servicio + token (vigencia 24h) */
     public function registrar(Request $request)
     {
         $request->validate([
@@ -83,18 +86,17 @@ class AsignaServicioController extends Controller
             'operadora'  => 'required|string|max:120',
         ]);
 
-        
-        $now = \Carbon\Carbon::now(config('app.timezone')); // America/Bogota
-
-        $token = $this->generarTokenUnico3();
+        // Usa la zona horaria de la app (config('app.timezone') -> America/Bogota)
+        $now   = Carbon::now(config('app.timezone'));
+        $token = $this->generarTokenUnicoMix();  // <<-- usar el nuevo generador
         $exp   = (clone $now)->addDay();
 
         DB::table('disponibles')->insert([
-            'dis_conmo'            => $request->conmo, // ⚠️ si guardas la cédula en vez de mo_id, ajusta aquí
+            'dis_conmo'            => $request->conmo, // ⚠️ si guardas la cédula en vez de mo_id, ajusta aquí y los JOINs
             'dis_dire'             => trim($request->direccion).' - '.$request->barrio,
             'dis_usuario'          => $request->usuario,
-            'dis_fecha' => $now->toDateString(),      // YYYY-MM-DD
-            'dis_hora'  => $now->format('H:i:s'),     // HH:mm:ss
+            'dis_fecha'            => $now->toDateString(),   // YYYY-MM-DD
+            'dis_hora'             => $now->format('H:i:s'),  // HH:mm:ss
             'dis_operadora'        => $request->operadora,
             'dis_token'            => $token,
             'dis_token_expires_at' => $exp,
@@ -107,21 +109,22 @@ class AsignaServicioController extends Controller
         ]);
     }
 
-    /** Vista de consulta por token */
+    /** Vista de consulta por token (pública) */
     public function vistaConsulta()
     {
         return view('servicios.consulta-token');
     }
 
-    /** Buscar datos de un servicio a partir del token */
+    /** Buscar datos de un servicio a partir del token (1 letra + 2 números) */
     public function buscarPorToken(Request $request)
     {
         $token = strtoupper(trim($request->get('token', '')));
 
-        if (!preg_match('/^\d{3}$/', $token)) {
+        // patrón: 1 letra + 2 números, p.ej. A07
+        if (!preg_match('/^[A-Z]\d{2}$/', $token)) {
             return response()->json([
                 'found' => false,
-                'message' => 'Token inválido. Debe ser un número de 3 dígitos.'
+                'message' => 'Token inválido. Debe ser una letra seguida de 2 números (ej: A07).'
             ], 400);
         }
 
