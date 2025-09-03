@@ -120,4 +120,10 @@ Route::get('/servicios/asignar', [AsignaServicioController::class, 'vista'])->na
 Route::get('/servicios/moviles', [AsignaServicioController::class, 'movilesActivos'])->name('servicios.moviles'); // AJAX
 Route::post('/servicios/registrar', [AsignaServicioController::class, 'registrar'])->name('servicios.registrar'); // disponible
 
+
+Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsulta'])->name('servicios.consulta.vista');
+Route::get('/servicios/consulta/buscar', [AsignaServicioController::class, 'buscarPorToken'])
+    ->middleware('throttle:30,1') // máx 30 req/min por IP (ajusta a tu gusto)
+    ->name('servicios.consulta.buscar');
+
 Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->name('barrios.sugerencias');

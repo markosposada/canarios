@@ -127,29 +127,35 @@ async function asignar(mo_id) {
     const barrioTxt = $('#inpBarrio').val().trim();
     const barrioId  = $('#barrioId').val();
 
-    try {
-        await $.post('{{ route("servicios.registrar") }}', {
-            conmo: mo_id,                 // ⚠️ cambia si dis_conmo = mo_conductor
-            usuario: usuario,
-            direccion: direccion,
-            barrio: barrioTxt,
-            barrio_id: barrioId,
-            operadora: OPERADORA
-        });
+try {
+  const resp = await $.post('{{ route("servicios.registrar") }}', {
+    conmo: mo_id,
+    usuario, direccion,
+    barrio: barrioTxt,
+    barrio_id: barrioId,
+    operadora: OPERADORA
+  });
 
-        Swal.fire('Asignado', 'Servicio registrado correctamente.', 'success');
+  const token = resp.token || '---'; // ahora 3 dígitos
 
-        // Cerrar modal
-        const modalEl = document.getElementById('modalMoviles');
-        bootstrap.Modal.getInstance(modalEl).hide();
+  Swal.fire({
+    icon: 'success',
+    title: 'Servicio asignado',
+    html: `<div style="font-size:14px">Código para consulta (24h):</div>
+           <div style="font-size:32px;font-weight:800;letter-spacing:3px">${token}</div>`,
+  });
 
-        // === Limpiar inputs después de asignar ===
-        $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
-        $('#inpUsuario').focus();
+  // Cerrar modal
+  const modalEl = document.getElementById('modalMoviles');
+  bootstrap.Modal.getInstance(modalEl).hide();
 
-    } catch {
-        Swal.fire('Error', 'No se pudo registrar el servicio.', 'error');
-    }
+  // Limpiar inputs
+  $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
+  $('#inpUsuario').focus();
+
+} catch {
+  Swal.fire('Error', 'No se pudo registrar el servicio.', 'error');
+}
 }
 
 
