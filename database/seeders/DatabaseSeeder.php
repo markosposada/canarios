@@ -19,5 +19,13 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+ DB::table('barrios')->insert([
+        ['nombre' => 'Centro'],
+        ['nombre' => 'Las Margaritas'],
+        ['nombre' => 'Villa del Sol'],
+        ['nombre' => 'El Prado'],
+        ['nombre' => 'La Esperanza'],
+    ]);
+
     }
 }

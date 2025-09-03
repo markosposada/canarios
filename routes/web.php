@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\TaxiController;
 use App\Http\Controllers\ConductorController;
+use App\Http\Controllers\AsignaServicioController;
+use App\Http\Controllers\BarrioController;
+
 
 
 
@@ -113,3 +116,8 @@ Route::get('/conductores/buscar-ajax', [ConductorController::class, 'buscarMovil
 Route::post('/conductores/movil/{id}/estado', [ConductorController::class, 'actualizarEstado'])
     ->name('conductores.estado');
 
+Route::get('/servicios/asignar', [AsignaServicioController::class, 'vista'])->name('servicios.vista');
+Route::get('/servicios/moviles', [AsignaServicioController::class, 'movilesActivos'])->name('servicios.moviles'); // AJAX
+Route::post('/servicios/registrar', [AsignaServicioController::class, 'registrar'])->name('servicios.registrar'); // disponible
+
+Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->name('barrios.sugerencias');
