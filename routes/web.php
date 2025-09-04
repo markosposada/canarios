@@ -8,6 +8,8 @@ use App\Http\Controllers\TaxiController;
 use App\Http\Controllers\ConductorController;
 use App\Http\Controllers\AsignaServicioController;
 use App\Http\Controllers\BarrioController;
+use App\Http\Controllers\ConductorServiciosController;
+
 
 
 
@@ -140,3 +142,11 @@ Route::post('/servicios/cancelar/{id}', [AsignaServicioController::class, 'cance
     ->name('servicios.cancelar');
 
 Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->name('barrios.sugerencias');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/conductor/servicios', [ConductorServiciosController::class, 'vista'])
+        ->name('conductor.servicios');
+
+    Route::get('/conductor/servicios/listar', [ConductorServiciosController::class, 'listar'])
+        ->name('conductor.servicios.listar');
+});
