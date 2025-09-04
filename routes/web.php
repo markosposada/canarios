@@ -13,6 +13,7 @@ use App\Http\Controllers\BarrioController;
 
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -125,5 +126,17 @@ Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsul
 Route::get('/servicios/consulta/buscar', [AsignaServicioController::class, 'buscarPorToken'])
     ->middleware('throttle:30,1') // máx 30 req/min por IP (ajusta a tu gusto)
     ->name('servicios.consulta.buscar');
+
+// Vista del listado
+Route::get('/servicios/listado', [AsignaServicioController::class, 'listadoVista'])
+    ->name('servicios.listado.vista');
+
+// Datos para la tabla (AJAX)
+Route::get('/servicios/listar', [AsignaServicioController::class, 'listarServicios'])
+    ->name('servicios.listar');
+
+// Cancelar servicio (AJAX)
+Route::post('/servicios/cancelar/{id}', [AsignaServicioController::class, 'cancelarServicio'])
+    ->name('servicios.cancelar');
 
 Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->name('barrios.sugerencias');

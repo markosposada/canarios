@@ -170,4 +170,73 @@ class AsignaServicioController extends Controller
             'valor'     => $row->valor,
         ]);
     }
+
+// Mostrar la vista del listado
+// Mostrar la vista del listado
+public function listadoVista()
+{
+    return view('servicios.listado');
+}
+
+// Devolver servicios para la tabla (con filtros opcionales)
+public function listarServicios(Request $request)
+{
+    $desde = $request->query('desde'); // YYYY-MM-DD
+    $hasta = $request->query('hasta'); // YYYY-MM-DD
+    $q     = trim($request->query('q', ''));
+
+    $sql = DB::table('disponibles')
+        ->join('movil', 'disponibles.dis_conmo', '=', 'movil.mo_id')
+        ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
+        ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
+        ->selectRaw("
+            disponibles.dis_id         AS id,          -- << CORREGIDO
+            disponibles.dis_fecha      AS fecha,
+            disponibles.dis_hora       AS hora,
+            disponibles.dis_dire       AS direccion,
+            disponibles.dis_usuario    AS usuario,
+            disponibles.dis_token      AS token,
+            COALESCE(taxi.ta_placa,'') AS placa,
+            movil.mo_taxi              AS movil,
+            conductores.conduc_nombres AS conductor,
+            COALESCE(disponibles.dis_servicio, 1) AS estado
+        ");
+
+    if ($desde) { $sql->where('disponibles.dis_fecha', '>=', $desde); }
+    if ($hasta) { $sql->where('disponibles.dis_fecha', '<=', $hasta); }
+
+    if ($q !== '') {
+        $like = "%{$q}%";
+        $sql->where(function ($w) use ($like) {
+            $w->where('disponibles.dis_usuario', 'like', $like)
+              ->orWhere('disponibles.dis_dire', 'like', $like)
+              ->orWhere('disponibles.dis_token', 'like', $like)
+              ->orWhere('conductores.conduc_nombres', 'like', $like)
+              ->orWhereRaw('CAST(movil.mo_taxi AS CHAR) LIKE ?', [$like])
+              ->orWhere('taxi.ta_placa', 'like', $like);
+        });
+    }
+
+    $rows = $sql->orderByDesc('disponibles.dis_fecha')
+                ->orderByDesc('disponibles.dis_hora')
+                ->limit(500)
+                ->get();
+
+    return response()->json($rows);
+}
+
+// Cancelar: pone dis_servicio = 2 (cancelado)
+public function cancelarServicio($id)
+{
+    $affected = DB::table('disponibles')
+        ->where('dis_id', $id)   // << CORREGIDO
+        ->where(function($w){
+            $w->whereNull('dis_servicio')->orWhere('dis_servicio', '!=', 2);
+        })
+        ->update(['dis_servicio' => 2]);
+
+    return response()->json(['success' => $affected > 0]);
+}
+
+
 }
