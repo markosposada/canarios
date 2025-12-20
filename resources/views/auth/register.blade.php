@@ -1,32 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Registrar Usuario</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+@extends('layouts.app')
 
-    {{-- Bootstrap (opcional para estilos bonitos) --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+@section('title', 'Registrar Usuario')
 
-    {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
-        .register-form {
-            max-width: 600px;
-            margin: 2rem auto;
-            background: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-
+@section('content')
 <div class="register-form">
     <h2 class="mb-4 text-center">Registro de Usuario</h2>
 
@@ -85,7 +61,7 @@
                 <option value="" disabled selected>Seleccione un rol</option>
                 <option value="administrador">Administrador</option>
                 <option value="operadora">Operadora</option>
-                <option value="conductor">Conductor</option>                
+                <option value="conductor">Conductor</option>
             </select>
             @error('rol')
                 <small class="text-danger">{{ $message }}</small>
@@ -111,7 +87,7 @@
     </form>
 </div>
 
-{{-- Mostrar popup de éxito --}}
+{{-- Popups con SweetAlert2 --}}
 @if(session('success'))
 <script>
     Swal.fire({
@@ -127,7 +103,6 @@
 </script>
 @endif
 
-{{-- Mostrar errores generales --}}
 @if(session('error'))
 <script>
     Swal.fire({
@@ -137,6 +112,4 @@
     });
 </script>
 @endif
-
-</body>
-</html>
+@endsection

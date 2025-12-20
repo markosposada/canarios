@@ -63,10 +63,19 @@ function badgeEstado(estado) {
   return '<span class="badge bg-success">Activo</span>';
 }
 
-function botonAccion(id, estado) {
+// AHORA RECIBE puede_cancelar
+function botonAccion(id, estado, puede_cancelar) {
+  // ya cancelado
   if (Number(estado) === 2) {
     return '<button class="btn btn-sm btn-outline-secondary" disabled>—</button>';
   }
+
+  // pasó la hora límite
+  if (Number(puede_cancelar) === 0) {
+    return '<button class="btn btn-sm btn-outline-secondary" disabled title="Tiempo de cancelación vencido">No disponible</button>';
+  }
+
+  // se puede cancelar
   return `<button class="btn btn-sm btn-danger" onclick="cancelar(${id})">Cancelar</button>`;
 }
 
@@ -90,7 +99,7 @@ function pintarTabla(rows) {
         <td>${r.placa ?? ''}</td>
         <td class="text-start">${r.conductor ?? ''}</td>
         <td>${badgeEstado(r.estado)}</td>
-        <td>${botonAccion(r.id, r.estado)}</td>
+        <td>${botonAccion(r.id, r.estado, r.puede_cancelar)}</td>
       </tr>
     `);
   });
@@ -140,7 +149,7 @@ async function cancelar(id) {
       Swal.fire('Listo', 'Servicio cancelado.', 'success');
       cargarTabla();
     } else {
-      Swal.fire('Sin cambios', 'No fue posible cancelar (¿ya estaba cancelado?).', 'info');
+      Swal.fire('Sin cambios', 'No fue posible cancelar (¿ya estaba cancelado o vencido?).', 'info');
     }
   } catch {
     Swal.fire('Error', 'No se pudo cancelar el servicio.', 'error');

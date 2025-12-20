@@ -25,7 +25,11 @@ class AsignaServicioController extends Controller
             ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
             ->leftJoin('disponibles', function($join) use ($hoy) {
                 $join->on('disponibles.dis_conmo', '=', 'movil.mo_id')
-                     ->whereDate('disponibles.dis_fecha', $hoy);
+                    ->whereDate('disponibles.dis_fecha', $hoy)
+                    ->where(function($w) {
+                        $w->whereNull('disponibles.dis_servicio')
+                          ->orWhere('disponibles.dis_servicio', 1);
+                    });
             })
             ->where('movil.mo_estado', 1)
             ->when($q !== '', function($sql) use ($q) {
@@ -60,7 +64,7 @@ class AsignaServicioController extends Controller
     /** Genera token: 1 letra + 2 números (A00–Z99), único entre tokens no vencidos */
     private function generarTokenUnicoMix(): string
     {
-        $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // puedes excluir letras si quieres evitar confusiones
+        $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         do {
             $letra = $letras[random_int(0, strlen($letras) - 1)];
             $num   = str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
@@ -77,37 +81,45 @@ class AsignaServicioController extends Controller
 
     /** Registrar servicio + token (vigencia 24h) */
     public function registrar(Request $request)
-    {
-        $request->validate([
-            'conmo'      => 'required',
-            'usuario'    => 'required|string|max:200',
-            'direccion'  => 'required|string|max:255',
-            'barrio'     => 'required|string|max:120',
-            'operadora'  => 'required|string|max:120',
-        ]);
+{
+    $request->validate([
+        'conmo'      => 'required',
+        'usuario'    => 'required|string|max:200',
+        'direccion'  => 'required|string|max:255',
+        'barrio'     => 'required|string|max:120',
+        'operadora'  => 'required|string|max:200',
+    ]);
 
-        // Usa la zona horaria de la app (config('app.timezone') -> America/Bogota)
-        $now   = Carbon::now(config('app.timezone'));
-        $token = $this->generarTokenUnicoMix();  // <<-- usar el nuevo generador
-        $exp   = (clone $now)->addDay();
+    // Buscar móvil + placa
+    $movil = DB::table('movil')
+        ->join('taxi', 'movil.mo_taxi', '=', 'taxi.ta_movil')
+        ->where('movil.mo_id', $request->conmo)
+        ->select('movil.mo_taxi', 'taxi.ta_placa')
+        ->first();
 
-        DB::table('disponibles')->insert([
-            'dis_conmo'            => $request->conmo, // ⚠️ si guardas la cédula en vez de mo_id, ajusta aquí y los JOINs
-            'dis_dire'             => trim($request->direccion).' - '.$request->barrio,
-            'dis_usuario'          => $request->usuario,
-            'dis_fecha'            => $now->toDateString(),   // YYYY-MM-DD
-            'dis_hora'             => $now->format('H:i:s'),  // HH:mm:ss
-            'dis_operadora'        => $request->operadora,
-            'dis_token'            => $token,
-            'dis_token_expires_at' => $exp,
-        ]);
+    $now   = Carbon::now(config('app.timezone'));
+    $token = $this->generarTokenUnicoMix();
+    $exp   = (clone $now)->addDay();
 
-        return response()->json([
-            'success'    => true,
-            'token'      => $token,
-            'expires_at' => $exp->toDateTimeString()
-        ]);
-    }
+    DB::table('disponibles')->insert([
+        'dis_conmo'             => $request->conmo,
+        'dis_dire'              => trim($request->direccion).' - '.$request->barrio,
+        'dis_usuario'           => $request->usuario,
+        'dis_fecha'             => $now->toDateString(),
+        'dis_hora'              => $now->format('H:i:s'),
+        'dis_operadora'         => $request->operadora,
+        'dis_token'             => $token,
+        'dis_token_expires_at'  => $exp,
+    ]);
+
+    return response()->json([
+        'success'    => true,
+        'token'      => $token,
+        'expires_at' => $exp->toDateTimeString(),
+        'movil'      => $movil->mo_taxi ?? null,
+        'placa'      => $movil->ta_placa ?? null,
+    ]);
+}
 
     /** Vista de consulta por token (pública) */
     public function vistaConsulta()
@@ -120,7 +132,6 @@ class AsignaServicioController extends Controller
     {
         $token = strtoupper(trim($request->get('token', '')));
 
-        // patrón: 1 letra + 2 números, p.ej. A07
         if (!preg_match('/^[A-Z]\d{2}$/', $token)) {
             return response()->json([
                 'found' => false,
@@ -131,7 +142,7 @@ class AsignaServicioController extends Controller
         $now = Carbon::now();
 
         $row = DB::table('disponibles')
-            ->join('movil', 'disponibles.dis_conmo', '=', 'movil.mo_id') // ⚠️ si usas mo_conductor cámbialo
+            ->join('movil', 'disponibles.dis_conmo', '=', 'movil.mo_id')
             ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
             ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
             ->leftJoin('tarifas_servicio as t', 't.anio', '=', DB::raw('YEAR(disponibles.dis_fecha)'))
@@ -144,6 +155,7 @@ class AsignaServicioController extends Controller
                 disponibles.dis_dire         AS direccion,
                 disponibles.dis_fecha        AS fecha,
                 disponibles.dis_hora         AS hora,
+                disponibles.dis_operadora    AS operadora,
                 conductores.conduc_nombres   AS conductor,
                 movil.mo_taxi                AS movil,
                 COALESCE(taxi.ta_placa,'')   AS placa,
@@ -167,43 +179,58 @@ class AsignaServicioController extends Controller
             'conductor' => $row->conductor,
             'movil'     => $row->movil,
             'placa'     => $row->placa,
+            'operadora' => $row->operadora,
             'valor'     => $row->valor,
         ]);
     }
 
-// Mostrar la vista del listado
-// Mostrar la vista del listado
-public function listadoVista()
-{
-    return view('servicios.listado');
-}
+    /** Mostrar la vista del listado */
+    public function listadoVista()
+    {
+        return view('servicios.listado');
+    }
 
-// Devolver servicios para la tabla (con filtros opcionales)
+    /** Devolver servicios para la tabla (con filtros opcionales) */
+    /** Devolver servicios para la tabla (con filtros opcionales) */
 public function listarServicios(Request $request)
 {
-    $desde = $request->query('desde'); // YYYY-MM-DD
-    $hasta = $request->query('hasta'); // YYYY-MM-DD
+    $desde = $request->query('desde');
+    $hasta = $request->query('hasta');
     $q     = trim($request->query('q', ''));
+
+    $now = Carbon::now()->toDateTimeString();
 
     $sql = DB::table('disponibles')
         ->join('movil', 'disponibles.dis_conmo', '=', 'movil.mo_id')
         ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
         ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
+        // ⬇️ ELIMINADO: ->leftJoin('usuarios as op', ...)
         ->selectRaw("
-            disponibles.dis_id         AS id,          -- << CORREGIDO
-            disponibles.dis_fecha      AS fecha,
-            disponibles.dis_hora       AS hora,
-            disponibles.dis_dire       AS direccion,
-            disponibles.dis_usuario    AS usuario,
-            disponibles.dis_token      AS token,
-            COALESCE(taxi.ta_placa,'') AS placa,
-            movil.mo_taxi              AS movil,
-            conductores.conduc_nombres AS conductor,
-            COALESCE(disponibles.dis_servicio, 1) AS estado
-        ");
+            disponibles.dis_id          AS id,
+            disponibles.dis_fecha       AS fecha,
+            disponibles.dis_hora        AS hora,
+            disponibles.dis_dire        AS direccion,
+            disponibles.dis_usuario     AS usuario,
+            disponibles.dis_token       AS token,
+            disponibles.dis_operadora   AS operadora,
+            COALESCE(taxi.ta_placa,'')  AS placa,
+            movil.mo_taxi               AS movil,
+            conductores.conduc_nombres  AS conductor,
+            COALESCE(disponibles.dis_servicio, 1) AS estado,
+            CASE
+                WHEN COALESCE(disponibles.dis_servicio, 1) = 2 THEN 0
+                WHEN TIMESTAMP(disponibles.dis_fecha, disponibles.dis_hora) >= DATE_SUB(?, INTERVAL 1 HOUR)
+                    THEN 1
+                ELSE 0
+            END AS puede_cancelar
+        ", [$now]);
 
-    if ($desde) { $sql->where('disponibles.dis_fecha', '>=', $desde); }
-    if ($hasta) { $sql->where('disponibles.dis_fecha', '<=', $hasta); }
+    if ($desde) {
+        $sql->where('disponibles.dis_fecha', '>=', $desde);
+    }
+    if ($hasta) {
+        $sql->where('disponibles.dis_fecha', '<=', $hasta);
+    }
 
     if ($q !== '') {
         $like = "%{$q}%";
@@ -211,6 +238,7 @@ public function listarServicios(Request $request)
             $w->where('disponibles.dis_usuario', 'like', $like)
               ->orWhere('disponibles.dis_dire', 'like', $like)
               ->orWhere('disponibles.dis_token', 'like', $like)
+              ->orWhere('disponibles.dis_operadora', 'like', $like)
               ->orWhere('conductores.conduc_nombres', 'like', $like)
               ->orWhereRaw('CAST(movil.mo_taxi AS CHAR) LIKE ?', [$like])
               ->orWhere('taxi.ta_placa', 'like', $like);
@@ -225,18 +253,17 @@ public function listarServicios(Request $request)
     return response()->json($rows);
 }
 
-// Cancelar: pone dis_servicio = 2 (cancelado)
-public function cancelarServicio($id)
-{
-    $affected = DB::table('disponibles')
-        ->where('dis_id', $id)   // << CORREGIDO
-        ->where(function($w){
-            $w->whereNull('dis_servicio')->orWhere('dis_servicio', '!=', 2);
-        })
-        ->update(['dis_servicio' => 2]);
 
-    return response()->json(['success' => $affected > 0]);
-}
+    /** Cancelar: pone dis_servicio = 2 (cancelado) */
+    public function cancelarServicio($id)
+    {
+        $affected = DB::table('disponibles')
+            ->where('dis_id', $id)
+            ->where(function($w){
+                $w->whereNull('dis_servicio')->orWhere('dis_servicio', '!=', 2);
+            })
+            ->update(['dis_servicio' => 2]);
 
-
+        return response()->json(['success' => $affected > 0]);
+    }
 }

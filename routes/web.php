@@ -39,9 +39,14 @@ Route::get('forgot-password', function () {
 })->name('password.request');
 
 // Dashboard (solo autenticado)
+/*Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware('auth'); */
+
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware('auth');
+})->name('dashboard');
+
 
 // Módulo conductor (sin filtro por rol)
 Route::get('/modulo-conductor', function () {
@@ -116,8 +121,14 @@ Route::get('/conductores', [ConductorController::class, 'panelConductores'])->na
 Route::get('/conductores/buscar-ajax', [ConductorController::class, 'buscarMovilAjax'])->name('conductores.buscarAjax');
 //Route::post('/conductores/actualizar-estado/{movil}', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
 //Route::post('/conductores/actualizar-estado/{id}', [ConductorController::class, 'actualizarEstado'])->name('conductores.actualizarEstado');
+
+
+//Route::post('/conductores/movil/{id}/estado', [ConductorController::class, 'actualizarEstado'])
+  //  ->name('conductores.estado');
+
 Route::post('/conductores/movil/{id}/estado', [ConductorController::class, 'actualizarEstado'])
-    ->name('conductores.estado');
+    ->name('conductores.actualizarEstado');
+
 
 Route::get('/servicios/asignar', [AsignaServicioController::class, 'vista'])->name('servicios.vista');
 Route::get('/servicios/moviles', [AsignaServicioController::class, 'movilesActivos'])->name('servicios.moviles'); // AJAX

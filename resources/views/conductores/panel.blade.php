@@ -100,6 +100,7 @@
                 }
             },
             error: function() {
+                console.error('ERROR AJAX:', xhr.status, xhr.responseText);
                 Swal.fire('Error', 'Fallo al procesar la solicitud.', 'error');
             }
         });

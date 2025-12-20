@@ -9,7 +9,7 @@
         <div class="mb-3">
             <label class="form-label">Buscar por cédula</label>
             <div class="input-group">
-                <input type="text" id="buscarCedula" class="form-control">
+                <input type="number" id="buscarCedula" class="form-control">
                 <button type="button" class="btn btn-outline-secondary" id="btnBuscar">🔍</button>
             </div>
         </div>
@@ -27,7 +27,7 @@
 
             <div class="mb-3">
                 <label class="form-label">Número de licencia</label>
-                <input type="text" name="licencia" id="formLicencia" class="form-control" required>
+                <input type="number" name="licencia" id="formLicencia" class="form-control" required>
             </div>
 
             <div class="mb-3">
@@ -39,6 +39,10 @@
         </form>
     </div>
 </div>
+<a href="{{ url()->previous() }}" class="btn btn-secondary mb-3">
+    ← Atrás
+</a>
+
 @endsection
 
 @section('scripts')
@@ -50,6 +54,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const inputCedula = document.getElementById('buscarCedula');
     const btnBuscar = document.getElementById('btnBuscar');
     const formulario = document.getElementById('formularioLicencia');
+
+    // Disparar búsqueda al presionar Enter en el input
+    inputCedula.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            btnBuscar.click();
+        }
+    });
 
     btnBuscar.addEventListener('click', function () {
         const cedula = inputCedula.value.trim();

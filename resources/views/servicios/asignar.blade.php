@@ -20,7 +20,7 @@
                    list="barriosList"
                    autocomplete="off">
             <datalist id="barriosList"></datalist>
-            <input type="hidden" id="barrioId"> {{-- guarda el id del barrio si coincide con sugerencia --}}
+            <input type="hidden" id="barrioId">
         </div>
 
         <div class="col-md-4">
@@ -80,9 +80,38 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-/* ======= Setup ======= */
-$.ajaxSetup({ headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
-const OPERADORA = @json(Auth::user()->name ?? 'operadora');
+/* ======= Setup y Configuración CSRF ======= */
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+
+// Verificar que el token CSRF existe
+const csrfToken = $('meta[name="csrf-token"]').attr('content');
+if (!csrfToken) {
+    console.error('❌ Token CSRF no encontrado');
+    Swal.fire({
+        icon: 'error',
+        title: 'Error de configuración',
+        text: 'No se encontró el token de seguridad. Por favor recargue la página.',
+        confirmButtonText: 'Recargar',
+        allowOutsideClick: false
+    }).then(() => location.reload());
+}
+
+// ⬇️ CAMBIO: Obtener el nombre del usuario autenticado como string
+@auth
+    const OPERADORA = @json(Auth::user()->name ?? 'Operadora');
+    
+    console.log('✓ Usuario autenticado:', {
+        nombre: OPERADORA,
+        csrf_token: csrfToken ? '✓ OK' : '✗ MISSING'
+    });
+@else
+    const OPERADORA = 'No autenticado';
+    console.error('❌ No hay usuario autenticado');
+@endauth
 
 /* ======= Validaciones básicas ======= */
 function validarFormulario() {
@@ -94,6 +123,12 @@ function validarFormulario() {
         Swal.fire('Faltan datos', 'Usuario, Barrio y Dirección son obligatorios.', 'warning');
         return false;
     }
+
+    if (!OPERADORA || OPERADORA === 'No autenticado') {
+        Swal.fire('Error', 'No se pudo identificar la operadora. Por favor inicie sesión nuevamente.', 'error');
+        return false;
+    }
+
     return true;
 }
 
@@ -121,128 +156,220 @@ function pintarTabla(moviles) {
     });
 }
 
+/* ======= Asignar Servicio ======= */
 async function asignar(mo_id) {
     const usuario   = $('#inpUsuario').val().trim();
     const direccion = $('#inpDireccion').val().trim();
     const barrioTxt = $('#inpBarrio').val().trim();
     const barrioId  = $('#barrioId').val();
 
-try {
-  const resp = await $.post('{{ route("servicios.registrar") }}', {
-    conmo: mo_id,
-    usuario, direccion,
-    barrio: barrioTxt,
-    barrio_id: barrioId,
-    operadora: OPERADORA
-  });
+    console.log('📤 Enviando datos:', {
+        conmo: mo_id,
+        usuario,
+        direccion,
+        barrio: barrioTxt,
+        operadora: OPERADORA
+    });
 
-  const token = resp.token || '---'; // ahora 3 dígitos
+    try {
+        const resp = await $.ajax({
+            url: '{{ route("servicios.registrar") }}',
+            method: 'POST',
+            data: {
+                _token: csrfToken,
+                conmo: mo_id,
+                usuario, 
+                direccion,
+                barrio: barrioTxt,
+                barrio_id: barrioId,
+                operadora: OPERADORA
+            },
+            dataType: 'json'
+        });
 
-  Swal.fire({
-    icon: 'success',
-    title: 'Servicio asignado',
-    html: `<div style="font-size:14px">Código para consulta (24h):</div>
-           <div style="font-size:32px;font-weight:800;letter-spacing:3px">${token}</div>`,
-  });
+        console.log('✅ Respuesta exitosa:', resp);
 
-  // Cerrar modal
-  const modalEl = document.getElementById('modalMoviles');
-  bootstrap.Modal.getInstance(modalEl).hide();
+        const token = resp.token || '---';
+        const movil = resp.movil || '---';
+        const placa = resp.placa || '---';
+        // Cerrar modal de forma forzada
+        $('#modalMoviles').modal('hide');
+        
+        // Forzar la limpieza del modal y backdrop
+        setTimeout(() => {
+            $('.modal').modal('hide');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('padding-right', '');
+            
+           
+            
+            // Mostrar mensaje de éxito
+            Swal.fire({
+                icon: 'success',
+                title: 'Servicio asignado',
+                 html: `<div style="font-size:14px">
+                Móvil: <strong>${movil}</strong><br>
+                Placa: <strong>${placa}</strong><br><br>
+                       <div style="font-size:14px">Código para consulta (24h):</div>
+                       <div style="font-size:32px;font-weight:800;letter-spacing:3px">${token}</div>`,
+            }).then(() => {
+                // Limpiar inputs y enfocar
+                $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
+                $('#inpUsuario').focus();
+            });
+        }, 300);
 
-  // Limpiar inputs
-  $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
-  $('#inpUsuario').focus();
-
-} catch {
-  Swal.fire('Error', 'No se pudo registrar el servicio.', 'error');
-}
+    } catch (error) {
+        console.error('❌ Error completo:', error);
+        
+        let errorMsg = 'No se pudo registrar el servicio.';
+        let errorTitle = 'Error';
+        
+        // Manejo específico de error 419 (CSRF)
+        if (error.status === 419) {
+            errorTitle = 'Sesión expirada';
+            errorMsg = 'Su sesión ha expirado. La página se recargará automáticamente.';
+            
+            Swal.fire({
+                icon: 'warning',
+                title: errorTitle,
+                text: errorMsg,
+                confirmButtonText: 'Recargar ahora',
+                allowOutsideClick: false
+            }).then(() => location.reload());
+            return;
+        }
+        
+        // Otros errores de validación
+        if (error.responseJSON && error.responseJSON.errors) {
+            const errors = error.responseJSON.errors;
+            errorMsg = Object.values(errors).flat().join('<br>');
+        } else if (error.responseJSON && error.responseJSON.message) {
+            errorMsg = error.responseJSON.message;
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: errorTitle,
+            html: errorMsg
+        });
+    }
 }
 
 
 /* ======= BARRIO: <datalist> + AJAX (debounce) ======= */
 let debounceBarrio = null;
+
 function renderBarrios(options) {
-  const dl = document.getElementById('barriosList');
-  dl.innerHTML = '';
-  options.forEach(o => {
-    const opt = document.createElement('option');
-    opt.value = o.nombre;
-    opt.setAttribute('data-id', o.id);
-    dl.appendChild(opt);
-  });
+    const dl = document.getElementById('barriosList');
+    dl.innerHTML = '';
+    options.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.nombre;
+        opt.setAttribute('data-id', o.id);
+        dl.appendChild(opt);
+    });
 }
+
 async function buscarBarrios(q) {
-  if (!q || q.length < 2) { renderBarrios([]); return; }
-  try {
-    const url = `{{ route('barrios.sugerencias') }}?q=${encodeURIComponent(q)}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    renderBarrios(data);
-  } catch {}
+    if (!q || q.length < 2) { 
+        renderBarrios([]); 
+        return; 
+    }
+    try {
+        const url = `{{ route('barrios.sugerencias') }}?q=${encodeURIComponent(q)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        renderBarrios(data);
+    } catch (e) {
+        console.error('Error buscando barrios:', e);
+    }
 }
+
 document.getElementById('inpBarrio').addEventListener('input', function() {
-  const val = this.value.trim();
-  clearTimeout(debounceBarrio);
-  debounceBarrio = setTimeout(() => buscarBarrios(val), 200);
-  document.getElementById('barrioId').value = '';
+    const val = this.value.trim();
+    clearTimeout(debounceBarrio);
+    debounceBarrio = setTimeout(() => buscarBarrios(val), 200);
+    document.getElementById('barrioId').value = '';
 });
+
 document.getElementById('inpBarrio').addEventListener('change', function() {
-  const val = this.value.trim().toLowerCase();
-  const opts = Array.from(document.querySelectorAll('#barriosList option'));
-  const match = opts.find(o => o.value.trim().toLowerCase() === val);
-  document.getElementById('barrioId').value = match ? (match.getAttribute('data-id') || '') : '';
+    const val = this.value.trim().toLowerCase();
+    const opts = Array.from(document.querySelectorAll('#barriosList option'));
+    const match = opts.find(o => o.value.trim().toLowerCase() === val);
+    document.getElementById('barrioId').value = match ? (match.getAttribute('data-id') || '') : '';
 });
 
 /* ======= Modal y buscador interno ======= */
 function debounce(fn, wait = 200) {
-  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
+    let t; 
+    return (...args) => { 
+        clearTimeout(t); 
+        t = setTimeout(() => fn.apply(this, args), wait); 
+    };
 }
 
 $('#btnAbrirModal').on('click', async () => {
-  if (!validarFormulario()) return;
-  try {
-    const moviles = await cargarMoviles('');
-    pintarTabla(moviles);
-    const modal = new bootstrap.Modal(document.getElementById('modalMoviles'));
-    modal.show();
-    setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
-    $('#inpBuscarMovil').val('');
-  } catch {
-    Swal.fire('Error', 'No fue posible cargar los móviles.', 'error');
-  }
+    if (!validarFormulario()) return;
+    
+    try {
+        const moviles = await cargarMoviles('');
+        pintarTabla(moviles);
+        const modal = new bootstrap.Modal(document.getElementById('modalMoviles'));
+        modal.show();
+        setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
+        $('#inpBuscarMovil').val('');
+    } catch (e) {
+        console.error('Error cargando móviles:', e);
+        Swal.fire('Error', 'No fue posible cargar los móviles.', 'error');
+    }
 });
 
+/* ======= Navegación con Enter ======= */
 $('#inpUsuario').on('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('#inpBarrio').focus();
-  }
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        $('#inpBarrio').focus();
+    }
 });
 
 $('#inpDireccion').on('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); $('#btnAbrirModal').click(); }
+    if (e.key === 'Enter') { 
+        e.preventDefault(); 
+        $('#btnAbrirModal').click(); 
+    }
 });
 
 $('#inpBarrio').on('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); $('#inpDireccion').focus(); }
+    if (e.key === 'Enter') { 
+        e.preventDefault(); 
+        $('#inpDireccion').focus(); 
+    }
 });
 
+/* ======= Filtrar móviles en el modal ======= */
 const filtrarMoviles = debounce(async function () {
-  const q = $('#inpBuscarMovil').val();
-  try {
-    $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-muted">Buscando...</td></tr>');
-    const moviles = await cargarMoviles(q);
-    pintarTabla(moviles);
-  } catch {
-    $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-danger">Error al buscar</td></tr>');
-  }
+    const q = $('#inpBuscarMovil').val();
+    try {
+        $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-muted">Buscando...</td></tr>');
+        const moviles = await cargarMoviles(q);
+        pintarTabla(moviles);
+    } catch (e) {
+        console.error('Error filtrando móviles:', e);
+        $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-danger">Error al buscar</td></tr>');
+    }
 }, 250);
-$('#inpBuscarMovil').on('input', filtrarMoviles);
-$('#inpBuscarMovil').on('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 
+$('#inpBuscarMovil').on('input', filtrarMoviles);
+$('#inpBuscarMovil').on('keydown', (e) => { 
+    if (e.key === 'Enter') e.preventDefault(); 
+});
+
+/* ======= Limpiar formulario ======= */
 $('#btnLimpiar').on('click', () => {
-  $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
-  $('#inpUsuario').focus();
+    $('#inpUsuario, #inpBarrio, #barrioId, #inpDireccion').val('');
+    $('#inpUsuario').focus();
 });
 </script>
 @endsection

@@ -60,7 +60,7 @@ class LoginController extends Controller
             case 'administrador':
                 return '/dashboard';
             case 'operadora':
-                return '/modulo-operadora';
+                return '/dashboard';
             case 'conductor':
                 return '/modulo-conductor';
             case 'propietario taxi':

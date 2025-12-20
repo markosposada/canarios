@@ -44,7 +44,7 @@ class ConductorController extends Controller
             'cedula' => 'required',
             'nombres' => 'required|string|max:255',
             'licencia' => 'required|string|max:50',
-            'fecha' => 'required|date|after_or_equal:' . now()->toDateString()
+            'fecha' => 'required|date'
         ]);
 
         $conductor = Conductor::where('conduc_cc', $request->cedula)->first();
