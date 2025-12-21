@@ -14883,9 +14883,12 @@ dl {
 
 /* Sidebar */
 .sidebar {
-  min-height: calc(100vh - 70px);
-  background: -webkit-gradient(linear, left top, left bottom, from(#e6e5f2), to(#4599cd));
-  background: linear-gradient(to bottom, #e6e5f2, #4599cd);
+min-height: calc(100vh - 70px);
+  background: linear-gradient(
+    to bottom,
+    #0f6b4b,   /* verde principal */
+    #0a4f39    /* verde oscuro */
+  );
   font-family: "Rubik", sans-serif;
   padding: 0;
   width: 260px;
@@ -14949,7 +14952,7 @@ dl {
             font-size: 20px;
             line-height: 1;
             margin-right: 10px;
-            color: #423a8e; }
+            color: #f2c319; }
             .rtl .sidebar .nav .nav-item .nav-link i.menu-icon {
               margin-left: 10px;
               margin-right: 0; }
@@ -14967,15 +14970,15 @@ dl {
             .sidebar .nav .nav-item .nav-link i.menu-arrow:before {
               content: "\F415";
               font-size: 16px;
-              color: #423a8e;
-              opacity: 0.36; }
+              color: #f2c319; /* amarillo */
+  opacity: 0.8; }
             .sidebar .nav .nav-item .nav-link i.menu-arrow + .menu-icon {
               margin-left: 0.25rem; }
               .rtl .sidebar .nav .nav-item .nav-link i.menu-arrow + .menu-icon {
                 margin-left: 0;
                 margin-right: 0.25rem; }
         .sidebar .nav .nav-item .nav-link .menu-title {
-          color: #141212;
+          color: #ffffff;
           display: inline-block;
           font-size: 15px;
           line-height: 1;
@@ -14994,7 +14997,9 @@ dl {
       .sidebar .nav .nav-item.active {
         background: inherit; }
         .sidebar .nav .nav-item.active > .nav-link {
-          font-weight: 500; }
+          font-weight: 600;
+  background: rgba(255,255,255,0.2);
+  border-left: 4px solid #f2c319; /* amarillo */ }
           .sidebar .nav .nav-item.active > .nav-link .menu-title {
             color: inherit;
             font-family: "Rubik", sans-serif;
@@ -15048,7 +15053,7 @@ dl {
       .sidebar .nav.sub-menu .nav-item {
         padding: 0 0 0 18px; }
         .sidebar .nav.sub-menu .nav-item .nav-link {
-          color: #3e4b5b;
+          color: #ffffff;
           padding: 0.75rem 2rem 0.75rem 2rem;
           position: relative;
           font-size: 0.8125rem;
@@ -15075,8 +15080,8 @@ dl {
               left: auto;
               right: 0; }
           .sidebar .nav.sub-menu .nav-item .nav-link.active {
-            color: #3f50f6;
-            background: transparent; }
+            color: #f2c319; /* amarillo */
+  background: transparent; }
           .sidebar .nav.sub-menu .nav-item .nav-link:hover {
             color: #15191e; }
         .sidebar .nav.sub-menu .nav-item:hover {

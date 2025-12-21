@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 
 class AsignaServicioController extends Controller
 {
@@ -80,14 +83,14 @@ class AsignaServicioController extends Controller
     }
 
     /** Registrar servicio + token (vigencia 24h) */
-    public function registrar(Request $request)
+public function registrar(Request $request)
 {
     $request->validate([
         'conmo'      => 'required',
         'usuario'    => 'required|string|max:200',
         'direccion'  => 'required|string|max:255',
-        'barrio'     => 'required|string|max:120',
         'operadora'  => 'required|string|max:200',
+        'audio_path' => 'nullable|string|max:1000', // ✅ NUEVO
     ]);
 
     // Buscar móvil + placa
@@ -102,14 +105,16 @@ class AsignaServicioController extends Controller
     $exp   = (clone $now)->addDay();
 
     DB::table('disponibles')->insert([
-        'dis_conmo'             => $request->conmo,
-        'dis_dire'              => trim($request->direccion).' - '.$request->barrio,
-        'dis_usuario'           => $request->usuario,
-        'dis_fecha'             => $now->toDateString(),
-        'dis_hora'              => $now->format('H:i:s'),
-        'dis_operadora'         => $request->operadora,
-        'dis_token'             => $token,
-        'dis_token_expires_at'  => $exp,
+        'dis_conmo'            => $request->conmo,
+        'dis_servicio'         => 1,
+        'dis_dire'             => trim($request->direccion),
+        'dis_audio'            => $request->audio_path ?: null, // ✅ NUEVO
+        'dis_usuario'          => trim($request->usuario),
+        'dis_fecha'            => $now->toDateString(),
+        'dis_hora'             => $now->format('H:i:s'),
+        'dis_operadora'        => trim($request->operadora),
+        'dis_token'            => $token,
+        'dis_token_expires_at' => $exp,
     ]);
 
     return response()->json([
@@ -120,6 +125,8 @@ class AsignaServicioController extends Controller
         'placa'      => $movil->ta_placa ?? null,
     ]);
 }
+
+
 
     /** Vista de consulta por token (pública) */
     public function vistaConsulta()
@@ -266,4 +273,36 @@ public function listarServicios(Request $request)
 
         return response()->json(['success' => $affected > 0]);
     }
+
+  public function subirAudio(Request $request)
+{
+    try {
+        $request->validate([
+            // Edge/Chrome graban webm normalmente
+            'audio' => 'required|file|mimetypes:audio/webm,video/webm,audio/ogg,audio/wav,audio/mpeg|max:10240',
+        ]);
+
+        $file = $request->file('audio');
+
+        // Nombre único
+        $name = 'direccion_' . now()->format('Ymd_His') . '_' . Str::random(10) . '.webm';
+
+        // Guarda en storage/app/public/audios_direcciones/
+        $path = $file->storeAs('audios_direcciones', $name, 'public');
+
+        return response()->json([
+            'success' => true,
+            'path' => $path,
+            'url' => Storage::disk('public')->url($path),
+        ]);
+    } catch (\Throwable $e) {
+        report($e);
+
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 }
