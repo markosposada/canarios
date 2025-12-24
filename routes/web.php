@@ -9,6 +9,11 @@ use App\Http\Controllers\ConductorController;
 use App\Http\Controllers\AsignaServicioController;
 use App\Http\Controllers\BarrioController;
 use App\Http\Controllers\ConductorServiciosController;
+use App\Http\Controllers\Conductor\ServiciosAsignadosController;
+use App\Http\Controllers\Conductor\PushController;
+use App\Http\Controllers\Conductor\NotificacionesController;
+
+
 
 
 
@@ -26,6 +31,11 @@ use App\Http\Controllers\ConductorServiciosController;
 Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
+
+Route::get('/', function () {
+    return redirect('/login');
+});
+
 
 Route::post('login', [LoginController::class, 'login']);
 
@@ -157,6 +167,7 @@ Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->na
 
 
 
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/conductor/servicios', [ConductorServiciosController::class, 'vista'])
         ->name('conductor.servicios');
@@ -166,4 +177,26 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/servicios/audio', [AsignaServicioController::class, 'subirAudio'])
     ->name('servicios.audio');
+
+    
+    //codigo nuevo
+     Route::get('/conductor/servicios-asignados', [ServiciosAsignadosController::class, 'index'])
+        ->name('conductor.servicios_asignados');
+
+    Route::get('/conductor/servicios-asignados/listar', [ServiciosAsignadosController::class, 'listar'])
+        ->name('conductor.servicios_asignados.listar');
+
+        Route::get('/conductor/notificaciones', [NotificacionesController::class, 'index'])
+        ->name('conductor.notificaciones');
+
+    Route::get('/conductor/notificaciones/{id}/leer', [NotificacionesController::class, 'leer'])
+        ->name('conductor.notificaciones.leer');
+
+    Route::get('/conductor/notificaciones/leer-todas', [NotificacionesController::class, 'leerTodas'])
+    ->name('conductor.notificaciones.leer_todas');
+
+    Route::post('/conductor/push/subscribe', [PushController::class, 'subscribe'])->name('conductor.push.subscribe');
+
+        
+
 });

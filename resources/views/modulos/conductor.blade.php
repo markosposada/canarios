@@ -1,3 +1,8 @@
+
+@extends('layouts.app_conductor')
+
+@section('content')
+
 <!-- resources/views/modulos/operadora.blade.php -->
 <h1>Módulo conductor</h1>
 <a href="{{ route('logout') }}"
@@ -8,3 +13,4 @@
 <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
     @csrf
 </form>
+@endsection

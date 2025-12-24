@@ -6,7 +6,7 @@
 
     {{-- Formulario vertical: Usuario -> Dirección --}}
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
+        <div class="col-12 col-md-10 col-lg-8">
 
             <div class="mb-3">
                 <label class="form-label">Cliente / Usuario</label>
@@ -31,16 +31,66 @@
                 </div>
             </div>
 
-           <div class="mt-4 d-grid gap-4">
-   <button id="btnAbrirModal" class="btn btn-success btn-lg fw-bold">
-   🚕 ASIGNAR SERVICIO
-</button>
+            {{-- Botones (solo Agregar + Limpiar arriba) --}}
+            <div class="mt-4 d-flex gap-2">
+                <button id="btnAgregarServicio" class="btn btn-primary">
+                    ➕ Agregar
+                </button>
 
-    <button id="btnLimpiar" class="btn btn-outline-secondary">
-      🧹 Limpiar
-    </button>
+                <button id="btnLimpiar" class="btn btn-outline-secondary" type="button">
+                    🧹 Limpiar
+                </button>
+            </div>
+
+        </div>
+    </div>
 </div>
 
+{{-- Lista de pendientes --}}
+<div class="container pb-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8">
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0">Servicios pendientes</h5>
+                        <span class="badge bg-secondary" id="badgePendientes">0</span>
+                    </div>
+
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm align-middle" id="tablaPendientes">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px">#</th>
+                                    <th>Usuario</th>
+                                    <th>Dirección</th>
+                                    <th style="width:80px" class="text-center">Audio</th>
+                                    <th style="width:190px" class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="text-muted text-center">
+                                        No hay servicios pendientes.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Botón grande debajo de la tabla --}}
+                    <div class="mt-3 d-grid">
+                        <button id="btnAbrirModal" class="btn btn-dark btn-lg">
+                            🚕 ASIGNAR SERVICIO
+                        </button>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                        Tip: agrega varios servicios y luego asigna uno por uno.
+                    </small>
+                </div>
+            </div>
 
         </div>
     </div>
@@ -50,16 +100,22 @@
 <div class="modal fade" id="modalMoviles" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header">
-        <div class="w-100">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="modal-title mb-0">Seleccione el móvil</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="mt-3">
-                <input type="text" id="inpBuscarMovil" class="form-control" placeholder="Buscar por móvil, conductor o placa...">
-            </div>
+
+      {{-- Header modificado: dirección centrada --}}
+      <div class="modal-header flex-column align-items-stretch">
+        <div class="w-100 d-flex justify-content-between align-items-center">
+            <h5 class="modal-title mb-0">Seleccione el móvil</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
+
+        <div class="alert alert-primary text-center py-2 mb-3 mt-3 fw-bold">
+          📍 <span id="modalDireccionServicio">Dirección no definida</span>
+        </div>
+
+        <input type="text"
+               id="inpBuscarMovil"
+               class="form-control"
+               placeholder="Buscar por móvil, conductor o placa...">
       </div>
 
       <div class="modal-body">
@@ -78,6 +134,7 @@
             </table>
         </div>
       </div>
+
       <div class="modal-footer">
         <small class="text-muted">Ordenado por menor cantidad de servicios.</small>
       </div>
@@ -115,8 +172,40 @@ if (!csrfToken) {
   const OPERADORA = 'No autenticado';
 @endauth
 
+// ✅ URL base futura para consulta por token
+const URL_CONSULTA_TOKEN_BASE = "{{ url('/servicios/consulta') }}?token=";
+
+
 /* =========================================================
-   1) Mic Usuario (solo transcribe, SIN preview, no duplica)
+   ✅ Copiar al portapapeles (con fallback)
+   ========================================================= */
+async function copiarAlPortapapeles(texto) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    console.error('Error copiando:', e);
+    return false;
+  }
+}
+
+
+/* =========================================================
+   1) Mic Usuario (solo transcribe)
    ========================================================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -133,7 +222,7 @@ function attachMicSimple(buttonId, inputId, lang = 'es-ES') {
 
     const recognition = new SpeechRecognition();
     recognition.lang = lang;
-    recognition.interimResults = false; // ✅ sin preview
+    recognition.interimResults = false;
     recognition.continuous = false;
 
     let listening = false;
@@ -172,11 +261,9 @@ function attachMicSimple(buttonId, inputId, lang = 'es-ES') {
 
 attachMicSimple('btnMicUsuario', 'inpUsuario', 'es-ES');
 
+
 /* =========================================================
-   2) Dirección: UN SOLO botón
-      - 1er clic: transcribe en vivo + graba
-      - 2do clic: detiene y muestra mini-resumen (escuchar)
-      - Guardar => sube audio y guarda audio_path
+   2) Dirección: UN SOLO botón (transcribe+graba)
    ========================================================= */
 let dir_isRunning = false;
 
@@ -190,7 +277,7 @@ let dir_mediaRecorder = null;
 let dir_stream = null;
 let dir_audioChunks = [];
 
-// Pending audio (para mini resumen)
+// Pending audio
 let dir_pendingBlob = null;
 let dir_pendingUrl = null;
 
@@ -241,8 +328,8 @@ function startTranscriptionDireccion() {
 
   dir_recognition = new SpeechRecognition();
   dir_recognition.lang = 'es-ES';
-  dir_recognition.interimResults = true; // ✅ en vivo
-  dir_recognition.continuous = true;     // ✅ sigue hasta stop
+  dir_recognition.interimResults = true;
+  dir_recognition.continuous = true;
 
   dir_recognition.onresult = (event) => {
     let interim = '';
@@ -262,7 +349,6 @@ function startTranscriptionDireccion() {
 
   dir_recognition.onerror = (e) => {
     console.error('Speech error:', e);
-    // No rompemos todo, solo avisamos
     let msg = 'Falló la transcripción.';
     if (e.error === 'network') msg = 'Falló la transcripción (network). Prueba Edge/Chrome y localhost.';
     if (e.error === 'not-allowed') msg = 'Permiso de micrófono bloqueado para transcripción.';
@@ -270,7 +356,6 @@ function startTranscriptionDireccion() {
   };
 
   dir_recognition.onend = () => {
-    // consolidar sin interim
     const input = document.getElementById('inpDireccion');
     input.value = joinText(dir_baseText, dir_finalText).trim();
   };
@@ -293,11 +378,9 @@ async function startRecordingDireccion() {
   dir_mediaRecorder.onstop = async () => {
     try { dir_stream.getTracks().forEach(t => t.stop()); } catch (_) {}
 
-    // crear blob pendiente para “mini resumen”
     dir_pendingBlob = new Blob(dir_audioChunks, { type: 'audio/webm' });
     dir_pendingUrl = URL.createObjectURL(dir_pendingBlob);
 
-    // mini resumen: escuchar y decidir
     const result = await Swal.fire({
       icon: 'info',
       title: 'Audio de dirección listo',
@@ -323,7 +406,6 @@ async function startRecordingDireccion() {
     });
 
     if (result.isConfirmed) {
-      // Guardar => subir
       try {
         Swal.fire({
           title: 'Subiendo audio...',
@@ -343,11 +425,11 @@ async function startRecordingDireccion() {
         Swal.fire('Error', 'No se pudo subir el audio. Revisa el backend.', 'error');
       }
     } else if (result.isDenied) {
-      //  Regrabar → limpiar dirección y volver a grabar
-       $('#inpDireccion').val('');  
+      // Regrabar: limpiar dirección
+      $('#inpDireccion').val('');
       $('#direccionAudioPath').val('');
       resetPendingAudio();
-      // arrancar inmediatamente otra vez
+
       toggleVoiceDireccion(true).catch(err => {
         console.error(err);
         Swal.fire('Error', 'No se pudo iniciar la regrabación.', 'error');
@@ -356,7 +438,6 @@ async function startRecordingDireccion() {
       // Descartar
       $('#direccionAudioPath').val('');
       resetPendingAudio();
-      // no hacemos nada
     }
   };
 
@@ -368,7 +449,6 @@ async function toggleVoiceDireccion(forceStart = false) {
 
   // START
   if (!dir_isRunning || forceStart) {
-    // limpiar audio anterior
     $('#direccionAudioPath').val('');
     resetPendingAudio();
 
@@ -377,7 +457,6 @@ async function toggleVoiceDireccion(forceStart = false) {
     btn.classList.remove('btn-outline-secondary');
     btn.classList.add('btn-danger');
 
-    // iniciar speech + recorder
     startTranscriptionDireccion();
     await startRecordingDireccion();
     return;
@@ -389,13 +468,8 @@ async function toggleVoiceDireccion(forceStart = false) {
   btn.classList.add('btn-outline-secondary');
   btn.classList.remove('btn-danger');
 
-  // detener speech
   try { dir_recognition?.stop(); } catch (_) {}
-
-  // detener recorder (esto dispara el mini resumen)
   try { dir_mediaRecorder?.stop(); } catch (_) {}
-
-  // por si acaso
   try { dir_stream?.getTracks()?.forEach(t => t.stop()); } catch (_) {}
 }
 
@@ -406,25 +480,10 @@ document.getElementById('btnVoiceDireccion')?.addEventListener('click', () => {
   });
 });
 
-/* ======= Validaciones básicas ======= */
-function validarFormulario() {
-    const usuario   = $('#inpUsuario').val().trim();
-    const direccion = $('#inpDireccion').val().trim();
 
-    if (!usuario || !direccion) {
-        Swal.fire('Faltan datos', 'Usuario y Dirección son obligatorios.', 'warning');
-        return false;
-    }
-
-    if (!OPERADORA || OPERADORA === 'No autenticado') {
-        Swal.fire('Error', 'No se pudo identificar la operadora. Por favor inicie sesión nuevamente.', 'error');
-        return false;
-    }
-
-    return true;
-}
-
-/* ======= MOVILES (modal) ======= */
+/* =========================================================
+   3) MÓVILES (modal)
+   ========================================================= */
 function cargarMoviles(q = '') {
     return $.get('{{ route("servicios.moviles") }}', { q });
 }
@@ -448,121 +507,11 @@ function pintarTabla(moviles) {
     });
 }
 
-/* ======= Asignar Servicio ======= */
-async function asignar(mo_id) {
-    const usuario   = $('#inpUsuario').val().trim();
-    const direccion = $('#inpDireccion').val().trim();
-    const audioPath = $('#direccionAudioPath').val().trim(); // puede ser vacío
-
-    try {
-        const resp = await $.ajax({
-            url: '{{ route("servicios.registrar") }}',
-            method: 'POST',
-            data: {
-                _token: csrfToken,
-                conmo: mo_id,
-                usuario,
-                direccion,
-                operadora: OPERADORA,
-                audio_path: audioPath
-            },
-            dataType: 'json'
-        });
-
-        const token = resp.token || '---';
-        const movil = resp.movil || '---';
-        const placa = resp.placa || '---';
-
-        $('#modalMoviles').modal('hide');
-
-        setTimeout(() => {
-            $('.modal').modal('hide');
-            $('.modal-backdrop').remove();
-            $('body').removeClass('modal-open');
-            $('body').css('padding-right', '');
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Servicio asignado',
-                html: `<div style="font-size:14px">
-                        Móvil: <strong>${movil}</strong><br>
-                        Placa: <strong>${placa}</strong><br><br>
-                        <div style="font-size:14px">Código para consulta (24h):</div>
-                        <div style="font-size:32px;font-weight:800;letter-spacing:3px">${token}</div>
-                       </div>`,
-            }).then(() => {
-                $('#inpUsuario, #inpDireccion, #direccionAudioPath').val('');
-                $('#inpUsuario').focus();
-            });
-        }, 300);
-
-    } catch (error) {
-        console.error('❌ Error completo:', error);
-
-        let errorMsg = 'No se pudo registrar el servicio.';
-        let errorTitle = 'Error';
-
-        if (error.status === 419) {
-            errorTitle = 'Sesión expirada';
-            errorMsg = 'Su sesión ha expirado. La página se recargará automáticamente.';
-            Swal.fire({
-                icon: 'warning',
-                title: errorTitle,
-                text: errorMsg,
-                confirmButtonText: 'Recargar ahora',
-                allowOutsideClick: false
-            }).then(() => location.reload());
-            return;
-        }
-
-        if (error.responseJSON && error.responseJSON.errors) {
-            const errors = error.responseJSON.errors;
-            errorMsg = Object.values(errors).flat().join('<br>');
-        } else if (error.responseJSON && error.responseJSON.message) {
-            errorMsg = error.responseJSON.message;
-        }
-
-        Swal.fire({ icon: 'error', title: errorTitle, html: errorMsg });
-    }
-}
-
-/* ======= Modal y buscador interno ======= */
 function debounce(fn, wait = 200) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
 }
 
-$('#btnAbrirModal').on('click', async () => {
-    if (dir_isRunning) {
-        Swal.fire('Grabación en curso', 'Detén la grabación/transcripción de la dirección antes de asignar.', 'warning');
-        return;
-    }
-
-    if (!validarFormulario()) return;
-
-    try {
-        const moviles = await cargarMoviles('');
-        pintarTabla(moviles);
-        const modal = new bootstrap.Modal(document.getElementById('modalMoviles'));
-        modal.show();
-        setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
-        $('#inpBuscarMovil').val('');
-    } catch (e) {
-        console.error('Error cargando móviles:', e);
-        Swal.fire('Error', 'No fue posible cargar los móviles.', 'error');
-    }
-});
-
-/* ======= Navegación con Enter ======= */
-$('#inpUsuario').on('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); $('#inpDireccion').focus(); }
-});
-
-$('#inpDireccion').on('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); $('#btnAbrirModal').click(); }
-});
-
-/* ======= Filtrar móviles en el modal ======= */
 const filtrarMoviles = debounce(async function () {
     const q = $('#inpBuscarMovil').val();
     try {
@@ -578,19 +527,295 @@ const filtrarMoviles = debounce(async function () {
 $('#inpBuscarMovil').on('input', filtrarMoviles);
 $('#inpBuscarMovil').on('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 
-/* ======= Limpiar formulario ======= */
+
+/* =========================================================
+   4) PENDIENTES (carrito)
+   ========================================================= */
+let pendientes = [];
+let idxSeleccionado = null;
+const LS_KEY = 'canarios_pendientes';
+
+function savePendientes() {
+  localStorage.setItem(LS_KEY, JSON.stringify(pendientes));
+}
+
+function loadPendientes() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    pendientes = JSON.parse(raw) || [];
+  } catch (_) {
+    pendientes = [];
+  }
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
+function resetFormServicio() {
+  $('#inpUsuario').val('');
+  $('#inpDireccion').val('');
+  $('#direccionAudioPath').val('');
+  resetPendingAudio();
+  $('#inpUsuario').focus();
+}
+
+function renderPendientes() {
+  const $tbody = $('#tablaPendientes tbody').empty();
+  $('#badgePendientes').text(pendientes.length);
+
+  if (!pendientes.length) {
+    $tbody.append(`
+      <tr>
+        <td colspan="5" class="text-muted text-center">No hay servicios pendientes.</td>
+      </tr>
+    `);
+    return;
+  }
+
+  pendientes.forEach((p, i) => {
+    const audioTxt = p.audio_path ? '✅' : '—';
+    $tbody.append(`
+      <tr>
+        <td>${i + 1}</td>
+        <td>${escapeHtml(p.usuario)}</td>
+        <td style="max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${escapeHtml(p.direccion)}
+        </td>
+        <td class="text-center">${audioTxt}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-success me-2" onclick="seleccionarPendiente(${i})">Asignar</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="quitarPendiente(${i})">Quitar</button>
+        </td>
+      </tr>
+    `);
+  });
+}
+
+function quitarPendiente(i) {
+  pendientes.splice(i, 1);
+  savePendientes();
+  renderPendientes();
+}
+
+window.seleccionarPendiente = async function(i) {
+  if (dir_isRunning) {
+    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de asignar.', 'warning');
+    return;
+  }
+
+  if (!OPERADORA || OPERADORA === 'No autenticado') {
+    Swal.fire('Error', 'No se pudo identificar la operadora. Inicie sesión nuevamente.', 'error');
+    return;
+  }
+
+  idxSeleccionado = i;
+
+  // ✅ Dirección centrada en el modal
+  $('#modalDireccionServicio').text(pendientes[i]?.direccion || 'Dirección no definida');
+
+  try {
+    const moviles = await cargarMoviles('');
+    pintarTabla(moviles);
+
+    const modal = new bootstrap.Modal(document.getElementById('modalMoviles'));
+    modal.show();
+
+    setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
+    $('#inpBuscarMovil').val('');
+  } catch (e) {
+    console.error('Error cargando móviles:', e);
+    Swal.fire('Error', 'No fue posible cargar los móviles.', 'error');
+  }
+}
+
+/* Agregar */
+$('#btnAgregarServicio').on('click', () => {
+  const usuario = $('#inpUsuario').val().trim();
+  const direccion = $('#inpDireccion').val().trim();
+  const audio_path = $('#direccionAudioPath').val().trim();
+
+  if (!usuario || !direccion) {
+    Swal.fire('Faltan datos', 'Usuario y Dirección son obligatorios.', 'warning');
+    return;
+  }
+
+  if (dir_isRunning) {
+    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de agregar.', 'warning');
+    return;
+  }
+
+  pendientes.push({ usuario, direccion, audio_path });
+
+  savePendientes();
+  renderPendientes();
+  resetFormServicio();
+
+  Swal.fire({ icon:'success', title:'Agregado', text:'Servicio agregado a pendientes.', timer:800, showConfirmButton:false });
+});
+
+/* Botón grande: abre el primero */
+$('#btnAbrirModal').on('click', async () => {
+  if (!pendientes.length) {
+    Swal.fire('Sin pendientes', 'Agrega un servicio primero.', 'info');
+    return;
+  }
+  seleccionarPendiente(0);
+});
+
+/* Limpiar solo inputs */
 $('#btnLimpiar').on('click', () => {
-    // si estaba corriendo, detenemos
-    if (dir_isRunning) {
-      try { dir_recognition?.stop(); } catch (_) {}
-      try { dir_mediaRecorder?.stop(); } catch (_) {}
-      dir_isRunning = false;
-      $('#btnVoiceDireccion').text('🎤⏺️').removeClass('btn-danger').addClass('btn-outline-secondary');
+  if (dir_isRunning) {
+    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de limpiar.', 'warning');
+    return;
+  }
+  $('#inpUsuario, #inpDireccion, #direccionAudioPath').val('');
+  resetPendingAudio();
+  $('#inpUsuario').focus();
+});
+
+
+/* =========================================================
+   5) ASIGNAR: usa pendientes[idxSeleccionado]
+   ========================================================= */
+async function asignar(mo_id) {
+  if (idxSeleccionado === null || typeof pendientes[idxSeleccionado] === 'undefined') {
+    Swal.fire('Error', 'No hay servicio seleccionado para asignar.', 'error');
+    return;
+  }
+
+  const s = pendientes[idxSeleccionado];
+
+  try {
+    const resp = await $.ajax({
+      url: '{{ route("servicios.registrar") }}',
+      method: 'POST',
+      data: {
+        _token: csrfToken,
+        conmo: mo_id,
+        usuario: s.usuario,
+        direccion: s.direccion,
+        operadora: OPERADORA,
+        audio_path: s.audio_path || ''
+      },
+      dataType: 'json'
+    });
+
+    const token = resp.token || '---';
+    const movil = resp.movil || '---';
+    const placa = resp.placa || '---';
+
+    $('#modalMoviles').modal('hide');
+
+    // quitar de lista
+    pendientes.splice(idxSeleccionado, 1);
+    idxSeleccionado = null;
+    savePendientes();
+    renderPendientes();
+
+    setTimeout(() => {
+      $('.modal').modal('hide');
+      $('.modal-backdrop').remove();
+      $('body').removeClass('modal-open');
+      $('body').css('padding-right', '');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Servicio asignado',
+        html: `<div style="font-size:14px">
+          Móvil: <strong>${movil}</strong><br>
+          Placa: <strong>${placa}</strong><br><br>
+          <div style="font-size:14px">Código para consulta (24h):</div>
+          <div style="font-size:32px;font-weight:800;letter-spacing:3px">${token}</div>
+        </div>`,
+        confirmButtonText: 'OK',
+      }).then(async (r) => {
+        if (!r.isConfirmed) return;
+
+        const urlConsulta = URL_CONSULTA_TOKEN_BASE + encodeURIComponent(token);
+
+        const texto = [
+          '✅ Servicio asignado',
+          `🚕 Móvil: ${movil}`,
+          `🔖 Placa: ${placa}`,
+          `🔑 Código (24h): ${token}`,
+          `🔗 Consulta: ${urlConsulta}`
+        ].join('\n');
+
+        const ok = await copiarAlPortapapeles(texto);
+
+        if (ok) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Copiado',
+            text: 'La información del servicio fue copiada al portapapeles ✅',
+            timer: 1200,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire({
+            icon: 'warning',
+            title: 'No se pudo copiar',
+            text: 'Tu navegador bloqueó el portapapeles. Copia manualmente.',
+          });
+        }
+      });
+
+    }, 250);
+
+  } catch (error) {
+    console.error('❌ Error completo:', error);
+
+    let errorMsg = 'No se pudo registrar el servicio.';
+    let errorTitle = 'Error';
+
+    if (error.status === 419) {
+      errorTitle = 'Sesión expirada';
+      errorMsg = 'Su sesión ha expirado. La página se recargará automáticamente.';
+      Swal.fire({
+        icon: 'warning',
+        title: errorTitle,
+        text: errorMsg,
+        confirmButtonText: 'Recargar ahora',
+        allowOutsideClick: false
+      }).then(() => location.reload());
+      return;
     }
 
-    $('#inpUsuario, #inpDireccion, #direccionAudioPath').val('');
-    resetPendingAudio();
-    $('#inpUsuario').focus();
+    if (error.responseJSON && error.responseJSON.errors) {
+      const errors = error.responseJSON.errors;
+      errorMsg = Object.values(errors).flat().join('<br>');
+    } else if (error.responseJSON && error.responseJSON.message) {
+      errorMsg = error.responseJSON.message;
+    }
+
+    Swal.fire({ icon: 'error', title: errorTitle, html: errorMsg });
+  }
+}
+
+
+/* =========================================================
+   6) Navegación Enter
+   ========================================================= */
+$('#inpUsuario').on('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#inpDireccion').focus(); }
 });
+
+$('#inpDireccion').on('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#btnAgregarServicio').click(); }
+});
+
+
+/* =========================================================
+   INIT
+   ========================================================= */
+loadPendientes();
+renderPendientes();
 </script>
 @endsection

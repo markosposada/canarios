@@ -21,6 +21,9 @@
     
 </head>
 <body>
+    <button type="button" class="btn btn-primary" onclick="enablePushNotifications()">
+  Activar notificaciones
+</button>
     <div class="container-scroller">
         <!-- Sidebar -->
         <nav class="sidebar sidebar-offcanvas" id="sidebar">
@@ -37,7 +40,9 @@
                 
                 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('dashboard') }}">
+                    
+                    <a class="nav-link" href="{{ url('/modulo-conductor') }}">
+
                         <i class="mdi mdi-home menu-icon"></i>
                         <span class="menu-title">Menu Principal</span>
                     </a>
@@ -46,7 +51,7 @@
 
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url('/servicios/listado') }}">
+                    <a class="nav-link" href="{{ url('/conductor/servicios-asignados') }}">
                         <i class="mdi mdi-clipboard-list-outline menu-icon"></i>
                         <span class="menu-title">Listado de servicios</span>
                     </a>
@@ -154,26 +159,49 @@
                         <i class="mdi mdi-menu"></i>
                     </button>
                     
+                    @php
+    $unreadCount = auth()->check() ? auth()->user()->unreadNotifications()->count() : 0;
+    $lastUnread = auth()->check()
+        ? auth()->user()->unreadNotifications()->latest()->take(5)->get()
+        : collect();
+@endphp
                     <ul class="navbar-nav">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link count-indicator dropdown-toggle" id="notificationDropdown" href="#" data-toggle="dropdown">
-                                <i class="mdi mdi-bell-outline"></i>
-                                <span class="count count-varient1">0</span>
-                            </a>
-                            <div class="dropdown-menu navbar-dropdown navbar-dropdown-large preview-list" aria-labelledby="notificationDropdown">
-                                <h6 class="p-3 mb-0">Notificaciones</h6>
-                                <a class="dropdown-item preview-item">
-                                    <div class="preview-thumbnail">
-                                        <img src="{{ asset('assets/images/faces/face4.jpg') }}" alt="" class="profile-pic" />
-                                    </div>
-                                    <div class="preview-item-content">
-                                        <p class="mb-0">Dany Miles <span class="text-small text-muted">commented on your photo</span></p>
-                                    </div>
-                                </a>
-                                <div class="dropdown-divider"></div>
-                                <p class="p-3 mb-0">View all activities</p>
-                            </div>
-                        </li>
+                      <li class="nav-item dropdown">
+    <a class="nav-link count-indicator dropdown-toggle" id="notificationDropdown" href="#" data-toggle="dropdown">
+        <i class="mdi mdi-bell-outline"></i>
+        @if($unreadCount > 0)
+            <span class="count count-varient1">{{ $unreadCount }}</span>
+        @endif
+    </a>
+
+    <div class="dropdown-menu navbar-dropdown navbar-dropdown-large preview-list" aria-labelledby="notificationDropdown">
+        <h6 class="p-3 mb-0">Notificaciones</h6>
+
+        @if($unreadCount === 0)
+            <div class="dropdown-divider"></div>
+            <p class="p-3 mb-0 text-muted">Sin notificaciones</p>
+        @else
+            @foreach($lastUnread as $n)
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item preview-item" href="{{ route('conductor.notificaciones.leer', $n->id) }}">
+                    <div class="preview-item-content">
+                        <p class="mb-0">
+                            {{ $n->data['titulo'] ?? 'Notificación' }}
+                            <span class="text-small text-muted d-block">
+                                {{ $n->data['mensaje'] ?? '' }}
+                            </span>
+                        </p>
+                    </div>
+                </a>
+            @endforeach
+
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item text-center" href="{{ route('conductor.notificaciones') }}">
+                Ver todas
+            </a>
+        @endif
+    </div>
+</li>
                         
                     </ul>
                     
@@ -245,6 +273,54 @@
     <script src="{{ asset('assets/js/app.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     
+    <script>
+async function enablePushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('Tu navegador no soporta notificaciones push.');
+    return;
+  }
+
+  // Registra el SW (no es PWA, solo SW)
+  const reg = await navigator.serviceWorker.register('/sw.js');
+
+  // Pide permiso al usuario
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return;
+
+  const publicKey = "{{ config('services.webpush.public_key') }}";
+  if (!publicKey) {
+    console.error('Falta WEBPUSH_PUBLIC_KEY en config/services.php');
+    return;
+  }
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey)
+  });
+
+  await fetch("{{ route('conductor.push.subscribe') }}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify(sub)
+  });
+
+  console.log('Suscripción push guardada ✅');
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+</script>
+
+
     @yield('scripts')
 </body>
 </html>

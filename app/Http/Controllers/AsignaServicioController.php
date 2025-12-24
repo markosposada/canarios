@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Models\User;
+use App\Notifications\ServicioAsignadoNotification;
+use Minishlink\WebPush\WebPush;
+use Minishlink\WebPush\Subscription;
+
 
 
 class AsignaServicioController extends Controller
@@ -90,25 +95,26 @@ public function registrar(Request $request)
         'usuario'    => 'required|string|max:200',
         'direccion'  => 'required|string|max:255',
         'operadora'  => 'required|string|max:200',
-        'audio_path' => 'nullable|string|max:1000', // ✅ NUEVO
+        'audio_path' => 'nullable|string|max:1000',
     ]);
 
-    // Buscar móvil + placa
+    // Buscar móvil + placa + cedula conductor (mo_conductor = cédula)
     $movil = DB::table('movil')
-        ->join('taxi', 'movil.mo_taxi', '=', 'taxi.ta_movil')
+        ->leftJoin('taxi', 'movil.mo_taxi', '=', 'taxi.ta_movil')
         ->where('movil.mo_id', $request->conmo)
-        ->select('movil.mo_taxi', 'taxi.ta_placa')
+        ->select('movil.mo_taxi', 'movil.mo_conductor', 'taxi.ta_placa')
         ->first();
 
     $now   = Carbon::now(config('app.timezone'));
     $token = $this->generarTokenUnicoMix();
     $exp   = (clone $now)->addDay();
 
-    DB::table('disponibles')->insert([
+    // Registrar servicio (retorna ID)
+    $disId = DB::table('disponibles')->insertGetId([
         'dis_conmo'            => $request->conmo,
         'dis_servicio'         => 1,
         'dis_dire'             => trim($request->direccion),
-        'dis_audio'            => $request->audio_path ?: null, // ✅ NUEVO
+        'dis_audio'            => $request->audio_path ?: null,
         'dis_usuario'          => trim($request->usuario),
         'dis_fecha'            => $now->toDateString(),
         'dis_hora'             => $now->format('H:i:s'),
@@ -116,6 +122,79 @@ public function registrar(Request $request)
         'dis_token'            => $token,
         'dis_token_expires_at' => $exp,
     ]);
+
+    /**
+     * NOTIFICAR AL CONDUCTOR
+     * movil.mo_conductor = cédula
+     * users.cedula = cédula
+     */
+    try {
+        $conductorUser = null;
+
+        if ($movil && !empty($movil->mo_conductor)) {
+            $conductorUser = User::where('cedula', $movil->mo_conductor)->first();
+        }
+
+        // 1) Notificación en BD (campana)
+        if ($conductorUser) {
+            $conductorUser->notify(new ServicioAsignadoNotification([
+                'servicio_id' => $disId,
+                'direccion'   => trim($request->direccion),
+                'movil'       => $movil->mo_taxi ?? null,
+                'placa'       => $movil->ta_placa ?? null,
+                'token'       => $token,
+                'operadora'   => trim($request->operadora),
+                'fecha'       => $now->toDateString(),
+                'hora'        => $now->format('H:i:s'),
+            ]));
+        }
+
+        // 2) Push real (Android/Chrome)
+        if ($conductorUser) {
+            $subs = DB::table('push_subscriptions')
+                ->where('user_id', $conductorUser->id)
+                ->get();
+
+            if ($subs->count() > 0) {
+                $webPush = new WebPush([
+                    'VAPID' => [
+                        'subject'    => 'mailto:soporte@loscanarios.com', // cámbialo si quieres
+                        'publicKey'  => config('services.webpush.public_key'),
+                        'privateKey' => config('services.webpush.private_key'),
+                    ],
+                ]);
+
+                foreach ($subs as $s) {
+                    $subscription = Subscription::create([
+                        'endpoint' => $s->endpoint,
+                        'keys' => [
+                            'p256dh' => $s->p256dh,
+                            'auth'   => $s->auth,
+                        ],
+                    ]);
+
+                    $payload = json_encode([
+                        'title' => '🚕 Nuevo servicio asignado',
+                        'body'  => trim($request->direccion),
+                        'data'  => [
+                            // ✅ aquí la ruta exacta que me confirmaste
+                            'url'   => url('/conductor/servicios-asignados'),
+                            'token' => $token,
+                            'movil' => $movil->mo_taxi ?? null,
+                        ],
+                    ]);
+
+                    $webPush->queueNotification($subscription, $payload);
+                }
+
+                foreach ($webPush->flush() as $report) {
+                    // opcional: limpiar subs inválidas
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        report($e); // no romper el registro por fallo de push
+    }
 
     return response()->json([
         'success'    => true,
@@ -125,6 +204,9 @@ public function registrar(Request $request)
         'placa'      => $movil->ta_placa ?? null,
     ]);
 }
+
+
+
 
 
 
