@@ -22,52 +22,57 @@ class AsignaServicioController extends Controller
         return view('servicios.asignar');
     }
 
-    /** Listado de móviles activos (con filtro q) */
-    public function movilesActivos(Request $request)
-    {
-        $hoy = Carbon::today()->toDateString();
-        $q   = trim($request->get('q', ''));
+/** Listado de móviles activos (con filtro q) */
+public function movilesActivos(Request $request)
+{
+    $hoy = Carbon::today()->toDateString();
+    $q   = trim($request->get('q', ''));
 
-        $moviles = DB::table('movil')
-            ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
-            ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
-            ->leftJoin('disponibles', function($join) use ($hoy) {
-                $join->on('disponibles.dis_conmo', '=', 'movil.mo_id')
-                    ->whereDate('disponibles.dis_fecha', $hoy)
-                    ->where(function($w) {
-                        $w->whereNull('disponibles.dis_servicio')
-                          ->orWhere('disponibles.dis_servicio', 1);
-                    });
-            })
-            ->where('movil.mo_estado', 1)
-            ->when($q !== '', function($sql) use ($q) {
-                $like = "%{$q}%";
-                $sql->where(function($w) use ($like) {
-                    $w->whereRaw('CAST(movil.mo_taxi AS CHAR) LIKE ?', [$like])
-                      ->orWhere('conductores.conduc_nombres', 'like', $like)
-                      ->orWhere('taxi.ta_placa', 'like', $like);
+    $moviles = DB::table('movil')
+        ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
+        ->leftJoin('taxi', 'taxi.ta_movil', '=', 'movil.mo_taxi')
+        ->leftJoin('disponibles', function($join) use ($hoy) {
+            $join->on('disponibles.dis_conmo', '=', 'movil.mo_id')
+                ->whereDate('disponibles.dis_fecha', $hoy)
+                ->where(function($w) {
+                    $w->whereNull('disponibles.dis_servicio')
+                      ->orWhere('disponibles.dis_servicio', 1);
                 });
-            })
-            ->groupBy(
-                'movil.mo_id',
-                'movil.mo_taxi',
-                'taxi.ta_placa',
-                'conductores.conduc_nombres',
-                'movil.mo_conductor'
-            )
-            ->selectRaw('
-                movil.mo_id,
-                movil.mo_taxi,
-                COALESCE(taxi.ta_placa, "") AS placa,
-                conductores.conduc_nombres AS nombre_conductor,
-                COUNT(disponibles.dis_conmo) AS cantidad
-            ')
-            ->orderBy('cantidad')
-            ->orderBy('movil.mo_taxi')
-            ->get();
+        })
+        ->where('movil.mo_estado', 1)
 
-        return response()->json($moviles);
-    }
+        // ✅ NUEVO: solo conductores activos
+        ->where('conductores.conduc_estado', 1)
+
+        ->when($q !== '', function($sql) use ($q) {
+            $like = "%{$q}%";
+            $sql->where(function($w) use ($like) {
+                $w->whereRaw('CAST(movil.mo_taxi AS CHAR) LIKE ?', [$like])
+                  ->orWhere('conductores.conduc_nombres', 'like', $like)
+                  ->orWhere('taxi.ta_placa', 'like', $like);
+            });
+        })
+        ->groupBy(
+            'movil.mo_id',
+            'movil.mo_taxi',
+            'taxi.ta_placa',
+            'conductores.conduc_nombres',
+            'movil.mo_conductor'
+        )
+        ->selectRaw('
+            movil.mo_id,
+            movil.mo_taxi,
+            COALESCE(taxi.ta_placa, "") AS placa,
+            conductores.conduc_nombres AS nombre_conductor,
+            COUNT(disponibles.dis_conmo) AS cantidad
+        ')
+        ->orderBy('cantidad')
+        ->orderBy('movil.mo_taxi')
+        ->get();
+
+    return response()->json($moviles);
+}
+
 
     /** Genera token: 1 letra + 2 números (A00–Z99), único entre tokens no vencidos */
     private function generarTokenUnicoMix(): string

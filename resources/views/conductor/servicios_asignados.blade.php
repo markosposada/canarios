@@ -35,13 +35,13 @@
                     <table class="table table-striped" id="tabla-servicios">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th style="width:60px;">#</th>
                                 <th>Movil</th>
-                                <th>Dirección</th>
-                                <th>Fecha</th>
-                                <th>Hora</th>
-                                <th>Operadora</th>
-                                <th>Pago</th>
+                                <th class="col-direccion">Dirección</th>
+                                <th style="min-width:100px;">Fecha</th>
+                                <th style="min-width:80px;">Hora</th>
+                                <th style="min-width:90px;">Operadora</th>
+                                <th style="min-width:100px;">Servicio</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -51,6 +51,22 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- estilos solo para esta vista --}}
+                <style>
+                    /* Para que la dirección no vuelva la tabla inmanejable en celular */
+                    #tabla-servicios td.col-direccion, #tabla-servicios th.col-direccion{
+                        max-width: 260px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+
+                    /* Mejor experiencia de scroll en móviles */
+                    .table-responsive{
+                        -webkit-overflow-scrolling: touch;
+                    }
+                </style>
 
             </div>
         </div>
@@ -63,6 +79,34 @@
 document.addEventListener('DOMContentLoaded', function () {
     const url = "{{ route('conductor.servicios_asignados.listar') }}";
 
+    function firstN(str, n) {
+        if (str === null || str === undefined) return '';
+        str = String(str);
+        return str.length > n ? str.slice(0, n) : str;
+    }
+
+    function escapeHtml(str){
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function renderServicioBadge(servicioValue) {
+        const v = parseInt(servicioValue, 10);
+
+        if (v === 1) {
+            return `<span class="badge bg-success">ACEPTADO</span>`;
+        }
+        if (v === 2) {
+            return `<span class="badge bg-danger">CANCELADO</span>`;
+        }
+        return `<span class="badge bg-secondary">DESCONOCIDO</span>`;
+    }
+
     function renderRows(rows, total) {
         const tbody = document.querySelector('#tabla-servicios tbody');
         tbody.innerHTML = '';
@@ -74,22 +118,34 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        rows.forEach(r => {
+        rows.forEach((r, idx) => {
             const tr = document.createElement('tr');
+
+            // operadora ya viene recortada desde SQL, pero por seguridad la recortamos igual
+            const operadoraFull = r.operadora ?? '';
+            const operadoraCorta = firstN(operadoraFull, 8);
+
             tr.innerHTML = `
-                <td>${r.fac_id ?? ''}</td>
-                <td>${r.fac_movil ?? ''}</td>
-                <td>${r.fac_direc ?? ''}</td>
-                <td>${r.fac_fecha ?? ''}</td>
-                <td>${r.fac_hora ?? ''}</td>
-                <td>${r.fac_operadora ?? ''}</td>
-                <td>${r.pago ?? ''}</td>
+                <td class="fw-bold">${idx + 1}</td>
+                <td>${escapeHtml(r.movil ?? '')}</td>
+                <td class="col-direccion" title="${escapeHtml(r.direccion ?? '')}">
+                    ${escapeHtml(r.direccion ?? '')}
+                </td>
+                <td>${escapeHtml(r.fecha ?? '')}</td>
+                <td>${escapeHtml(r.hora ?? '')}</td>
+                <td title="${escapeHtml(operadoraFull)}">${escapeHtml(operadoraCorta)}</td>
+                <td>${renderServicioBadge(r.servicio)}</td>
             `;
             tbody.appendChild(tr);
         });
 
         // Si DataTables está cargado en tu template, lo activa
-        if (window.$ && $.fn.DataTable && !$.fn.DataTable.isDataTable('#tabla-servicios')) {
+        if (window.$ && $.fn.DataTable) {
+            // si ya existe, lo destruimos para volver a pintar sin duplicar
+            if ($.fn.DataTable.isDataTable('#tabla-servicios')) {
+                $('#tabla-servicios').DataTable().destroy();
+            }
+
             $('#tabla-servicios').DataTable({
                 responsive: true,
                 pageLength: 10,

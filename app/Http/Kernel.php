@@ -17,9 +17,10 @@ class Kernel extends HttpKernel
 	 * @var array
 	 */
 protected $routeMiddleware = [
-    //'auth' => \App\Http\Middleware\Authenticate::class,
-    'rol' => \App\Http\Middleware\RolMiddleware::class,
+    'auth' => \App\Http\Middleware\Authenticate::class,
+    'rol'  => \App\Http\Middleware\RolMiddleware::class,
 ];
+
 
 
 	// ...

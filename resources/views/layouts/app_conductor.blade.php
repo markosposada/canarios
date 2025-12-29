@@ -21,17 +21,17 @@
     
 </head>
 <body>
-    <button type="button" class="btn btn-primary" onclick="enablePushNotifications()">
-  Activar notificaciones
-</button>
+
     <div class="container-scroller">
         <!-- Sidebar -->
         <nav class="sidebar sidebar-offcanvas" id="sidebar">
             <div class="text-center sidebar-brand-wrapper d-flex align-items-center">
-                <a class="sidebar-brand brand-logo" href="{{ route('dashboard') }}">
+                {{-- ✅ CAMBIO: antes route('dashboard') --}}
+                <a class="sidebar-brand brand-logo" href="{{ url('/modulo-conductor') }}">
                     <img src="{{ asset('assets/images/logo_transparente.png') }}" alt="logo" />
                 </a>
-                <a class="sidebar-brand brand-logo-mini pl-4 pt-3" href="{{ route('dashboard') }}">
+                {{-- ✅ CAMBIO: antes route('dashboard') --}}
+                <a class="sidebar-brand brand-logo-mini pl-4 pt-3" href="{{ url('/modulo-conductor') }}">
                     <img src="{{ asset('assets/images/logo-mini.svg') }}" alt="logo" />
                 </a>
             </div>
@@ -47,6 +47,9 @@
                         <span class="menu-title">Menu Principal</span>
                     </a>
                 </li>
+                    <button type="button" class="btn btn-primary" onclick="enablePushNotifications()">
+  Activar notificaciones
+</button>
                 
 
 
@@ -69,11 +72,9 @@
                         <ul class="nav flex-column sub-menu">
                             
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url('/taxis/editar-fechas') }}">Editar</a>
+                                <a class="nav-link" href="{{ url('/conductor/taxi') }}">Editar</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url('/taxis/panel') }}">Estado</a>
-                            </li>
+                           
                         </ul>
                     </div>
                 </li>
@@ -86,24 +87,26 @@
                     </a>
                     <div class="collapse" id="ui-basic1">
                         <ul class="nav flex-column sub-menu">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url('/conductores') }}">Estado</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url('/conductores/editar-licencia') }}">Editar</a>
-                            </li>
-                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url('/conductores/asignar') }}">Asignar Movil</a>
-                            </li>
-
                             
+                            <li class="nav-item">
+  <a class="nav-link" href="{{ route('conductor.moviles') }}">
+    <i class="mdi mdi-taxi menu-icon"></i>
+    <span class="menu-title">Mis Móviles</span>
+  </a>
+</li>
+
+<li class="nav-item">
+  <a class="nav-link" href="{{ route('conductor.perfil.edit') }}">
+    <i class="mdi mdi-account-circle menu-icon"></i>
+    <span class="menu-title">Mi Perfil</span>
+  </a>
+</li>
+                                                   
                         </ul>
                     </div>
                 </li>
                 
-                            
-
-                
+                                           
                 <li class="nav-item sidebar-actions">
                     <div class="nav-link">
                         <div class="mt-4">
@@ -152,7 +155,8 @@
             <!-- Top Navbar -->
             <nav class="navbar col-lg-12 col-12 p-lg-0 fixed-top d-flex flex-row">
                 <div class="navbar-menu-wrapper d-flex align-items-stretch justify-content-between">
-                    <a class="navbar-brand brand-logo-mini align-self-center d-lg-none" href="{{ route('dashboard') }}">
+                    {{-- ✅ CAMBIO: antes route('dashboard') --}}
+                    <a class="navbar-brand brand-logo-mini align-self-center d-lg-none" href="{{ url('/modulo-conductor') }}">
                         <img src="{{ asset('assets/images/logo-mini.svg') }}" alt="logo" />
                     </a>
                     <button class="navbar-toggler navbar-toggler align-self-center mr-2" type="button" data-toggle="minimize">
@@ -319,7 +323,6 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 </script>
-
 
     @yield('scripts')
 </body>

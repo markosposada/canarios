@@ -15,6 +15,7 @@ class RolMiddleware
 
         $user = Auth::user();
 
+        // Admin entra a todo
         if ($user->rol === 'administrador') {
             return $next($request);
         }

@@ -74,19 +74,62 @@ class ConductorController extends Controller
 
     // Buscar conductor por cédula
     public function buscarDatosConductor(Request $request)
-    {
-        $cedula = $request->input('cedula');
-        $conductor = DB::table('conductores')->where('conduc_cc', $cedula)->first();
+{
+    $cedula = trim($request->input('cedula', ''));
 
-        if (!$conductor) {
-            return response()->json(['encontrado' => false]);
-        }
-
-        return response()->json([
-            'encontrado' => true,
-            'nombre' => $conductor->conduc_nombres
-        ]);
+    if ($cedula === '') {
+        return response()->json(['encontrado' => false]);
     }
+
+    $conductor = DB::table('conductores')
+        ->where('conduc_cc', $cedula)
+        ->select('conduc_cc', 'conduc_nombres', 'conduc_estado')
+        ->first();
+
+    if (!$conductor) {
+        return response()->json(['encontrado' => false]);
+    }
+
+    return response()->json([
+        'encontrado' => true,
+        'cedula' => $conductor->conduc_cc,
+        'nombre' => $conductor->conduc_nombres,
+        'estado' => (int)$conductor->conduc_estado,
+    ]);
+}
+
+// =======================
+// BUSCAR CONDUCTORES (MODAL)
+// =======================
+public function buscarConductoresAsignar(Request $request)
+{
+    $q = trim($request->query('q', ''));
+
+    if ($q === '') {
+        return response()->json(['ok' => true, 'data' => []]);
+    }
+
+    $like = "%{$q}%";
+
+    $rows = DB::table('conductores as c')
+        ->where(function($w) use ($like){
+            $w->where('c.conduc_nombres', 'like', $like)
+              ->orWhereRaw('CAST(c.conduc_cc AS CHAR) LIKE ?', [$like]);
+        })
+        ->orderBy('c.conduc_nombres')
+        ->limit(30)
+        ->select([
+            'c.conduc_cc as cedula',
+            'c.conduc_nombres as nombre',
+            'c.conduc_estado as estado',
+        ])
+        ->get();
+
+    return response()->json([
+        'ok' => true,
+        'data' => $rows
+    ]);
+}
 
     // Guardar asignación en tabla movil
     public function guardarAsignacion(Request $request)

@@ -12,11 +12,14 @@ use App\Http\Controllers\ConductorServiciosController;
 use App\Http\Controllers\Conductor\ServiciosAsignadosController;
 use App\Http\Controllers\Conductor\PushController;
 use App\Http\Controllers\Conductor\NotificacionesController;
-
-
-
-
-
+use App\Http\Controllers\Conductor\EstadoConductorController;
+use App\Http\Controllers\Conductor\MovilesController;
+use App\Http\Controllers\Conductor\PerfilController;
+use App\Http\Controllers\Conductor\TaxiConductorController;
+use App\Http\Controllers\Operadora\SancionesController;
+use App\Http\Controllers\Operadora\FacturacionController;
+use App\Http\Controllers\Operadora\RecaudoController;
+use App\Http\Controllers\Operadora\RecaudoHistorialController;
 
 
 
@@ -80,6 +83,10 @@ Route::post('/logout', function () {
 Route::get('/index', function () {
     return view('auth.login');
 });
+
+Route::get('/servicios/consulta/buscar', [AsignaServicioController::class, 'buscarPorToken'])
+    ->middleware('throttle:30,1') // máx 30 req/min por IP (ajusta a tu gusto)
+    ->name('servicios.consulta.buscar');
 
 Route::get('/taxis/crear', [TaxiController::class, 'create'])->name('taxis.create');
 Route::post('/taxis', [TaxiController::class, 'store'])->name('taxis.store');
@@ -146,9 +153,7 @@ Route::post('/servicios/registrar', [AsignaServicioController::class, 'registrar
 
 
 Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsulta'])->name('servicios.consulta.vista');
-Route::get('/servicios/consulta/buscar', [AsignaServicioController::class, 'buscarPorToken'])
-    ->middleware('throttle:30,1') // máx 30 req/min por IP (ajusta a tu gusto)
-    ->name('servicios.consulta.buscar');
+
 
 // Vista del listado
 Route::get('/servicios/listado', [AsignaServicioController::class, 'listadoVista'])
@@ -164,19 +169,102 @@ Route::post('/servicios/cancelar/{id}', [AsignaServicioController::class, 'cance
 
 Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->name('barrios.sugerencias');
 
+    Route::post('/servicios/audio', [AsignaServicioController::class, 'subirAudio'])
+    ->name('servicios.audio');
+
 
 
 
 
 Route::middleware(['auth'])->group(function () {
+    //inicio operadora
+// Página 1: Sancionar
+    Route::get('/operadora/sancionar', [SancionesController::class, 'vistaSancionar'])
+        ->name('operadora.sancionar');
+
+    // Página 2: Anular/Levantar
+    Route::get('/operadora/sanciones/levantar', [SancionesController::class, 'vistaLevantar'])
+        ->name('operadora.sanciones.levantar_vista');
+
+    // AJAX
+    Route::get('/operadora/sanciones/moviles-activos', [SancionesController::class, 'movilesActivos'])
+        ->name('operadora.sanciones.moviles_activos');
+
+    Route::post('/operadora/sanciones/registrar', [SancionesController::class, 'registrar'])
+        ->name('operadora.sanciones.registrar');
+
+    Route::get('/operadora/sanciones/listar', [SancionesController::class, 'listar'])
+        ->name('operadora.sanciones.listar');
+
+    Route::post('/operadora/sanciones/{id}/levantar', [SancionesController::class, 'levantar'])
+        ->name('operadora.sanciones.levantar');
+
+        Route::get('/operadora/facturacion', [FacturacionController::class, 'vista'])
+        ->name('operadora.facturacion');
+
+    Route::get('/operadora/facturacion/pendientes', [FacturacionController::class, 'pendientes'])
+        ->name('operadora.facturacion.pendientes');
+
+    Route::post('/operadora/facturacion/facturar', [FacturacionController::class, 'facturar'])
+        ->name('operadora.facturacion.facturar');
+
+        Route::get('/operadora/recaudado', [RecaudoController::class, 'vista'])
+        ->name('operadora.recaudado');
+
+    Route::get('/operadora/recaudado/pendientes', [RecaudoController::class, 'pendientes'])
+        ->name('operadora.recaudado.pendientes');
+
+    Route::post('/operadora/recaudado/pagar', [RecaudoController::class, 'pagar'])
+        ->name('operadora.recaudado.pagar');
+
+        Route::get('/operadora/recaudado/historial', [RecaudoHistorialController::class, 'vista'])
+    ->name('operadora.recaudado.historial');
+
+Route::get('/operadora/recaudado/historial/listar', [RecaudoHistorialController::class, 'listar'])
+    ->name('operadora.recaudado.historial.listar');
+
+    Route::get('/operadora/recaudado/pendientes-cc', [RecaudoController::class, 'pendientesPorCedula'])
+  ->name('operadora.recaudado.pendientes_cc');
+
+  Route::get('/operadora/recaudado/buscar-conductores', [\App\Http\Controllers\Operadora\RecaudoController::class, 'buscarConductores'])
+    ->name('operadora.recaudado.buscar_conductores');
+
+Route::get('/operadora/recaudado/pendientes-cc', [\App\Http\Controllers\Operadora\RecaudoController::class, 'pendientesPorCedula'])
+    ->name('operadora.recaudado.pendientes_cc');
+
+    Route::get('/facturacion', [\App\Http\Controllers\Operadora\FacturacionController::class, 'vista'])->name('operadora.facturacion');
+
+    Route::get('/facturacion/pendientes-cc', [\App\Http\Controllers\Operadora\FacturacionController::class, 'pendientesPorCedula'])
+        ->name('operadora.facturacion.pendientes_cc');
+
+    Route::get('/facturacion/buscar-conductores', [\App\Http\Controllers\Operadora\FacturacionController::class, 'buscarConductores'])
+        ->name('operadora.facturacion.buscar_conductores');
+
+    Route::post('/facturacion/facturar', [\App\Http\Controllers\Operadora\FacturacionController::class, 'facturar'])
+        ->name('operadora.facturacion.facturar');
+
+        Route::get('/facturas-pendientes', [\App\Http\Controllers\Operadora\RecaudoController::class, 'vistaPendientesGlobal'])
+        ->name('operadora.facturas_pendientes');
+
+    Route::get('/facturas-pendientes/listar', [\App\Http\Controllers\Operadora\RecaudoController::class, 'pendientesGlobal'])
+        ->name('operadora.facturas_pendientes.listar');
+
+        Route::get('/conductores/asignar/buscar', [App\Http\Controllers\ConductorController::class, 'buscarConductoresAsignar'])
+    ->name('conductores.asignar.buscar');
+
+Route::post('/buscar-datos-conductor', [App\Http\Controllers\ConductorController::class, 'buscarDatosConductor'])
+
+    ->name('conductores.datos');
+
+
+//fin operadora
+
     Route::get('/conductor/servicios', [ConductorServiciosController::class, 'vista'])
         ->name('conductor.servicios');
 
     Route::get('/conductor/servicios/listar', [ConductorServiciosController::class, 'listar'])
         ->name('conductor.servicios.listar');
 
-    Route::post('/servicios/audio', [AsignaServicioController::class, 'subirAudio'])
-    ->name('servicios.audio');
 
     
     //codigo nuevo
@@ -197,6 +285,35 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/conductor/push/subscribe', [PushController::class, 'subscribe'])->name('conductor.push.subscribe');
 
-        
+    Route::get('/conductor/estado', [EstadoConductorController::class, 'index'])
+    ->name('conductor.estado');
+
+    Route::post('/conductor/estado', [EstadoConductorController::class, 'update'])
+    ->name('conductor.estado.update'); 
+    
+    Route::get('/conductor/moviles', [MovilesController::class, 'index'])
+    ->name('conductor.moviles');
+
+    Route::post('/conductor/moviles/{movilId}/toggle', [MovilesController::class, 'toggle'])
+    ->name('conductor.moviles.toggle');
+
+    Route::get('/conductor/perfil', [PerfilController::class, 'edit'])
+    ->name('conductor.perfil.edit');
+
+Route::post('/conductor/perfil', [PerfilController::class, 'update'])
+    ->name('conductor.perfil.update');
+
+    // Taxi del conductor (solo el asignado)
+Route::get('/conductor/taxi', [TaxiConductorController::class, 'edit'])
+    ->name('conductor.taxi.edit');
+
+Route::post('/conductor/taxi', [TaxiConductorController::class, 'update'])
+    ->name('conductor.taxi.update');
+
+Route::get(
+    '/conductor/ultimo-servicio',
+    [\App\Http\Controllers\Conductor\UltimoServicioController::class, 'show']
+)->name('conductor.ultimo_servicio');
+
 
 });

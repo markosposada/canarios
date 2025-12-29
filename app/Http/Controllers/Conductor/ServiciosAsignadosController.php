@@ -15,40 +15,37 @@ class ServiciosAsignadosController extends Controller
     public function index()
     {
         return view('conductor.servicios_asignados');
-
     }
 
     /**
      * Listado de servicios asignados al conductor (AJAX)
      */
     public function listar(Request $request)
-    {
-        // 🔑 CÉDULA del usuario logueado
-        $cedula = Auth::user()->cedula;
+{
+    $cedula = Auth::user()->cedula;
 
-        $rows = DB::table('facturacion as f')
-            ->join('movil as m', 'm.mo_id', '=', 'f.fac_condu')
-            ->join('estpago as ep', 'ep.ep_id', '=', 'f.fac_pago')
-            ->select([
-                'f.fac_id',
-                'f.fac_movil',
-                'f.fac_direc',
-                'f.fac_fecha',
-                'f.fac_hora',
-                'f.fac_operadora',
-                'ep.ep_name as pago',
-            ])
-            // Igual que tu sistema viejo
-            ->where('f.fac_pago', 1)
-            // 👇 FILTRO REAL POR CONDUCTOR
-            ->where('m.mo_conductor', $cedula)
-            ->orderByDesc('f.fac_fecha')
-            ->orderByDesc('f.fac_hora')
-            ->get();
+    $rows = DB::table('disponibles as d')
+        ->join('movil as m', 'm.mo_id', '=', 'd.dis_conmo')
+        ->select([
+            'd.dis_id',
+            'd.dis_conmo as movil',
+            'd.dis_dire as direccion',
+            'd.dis_fecha as fecha',
+            'd.dis_hora as hora',
+            DB::raw('LEFT(COALESCE(d.dis_operadora, ""), 8) as operadora'),
+            'd.dis_servicio as servicio',
+        ])
+        ->where('m.mo_conductor', $cedula)
+        // ✅ últimos 3 días (incluye hoy)
+        ->whereDate('d.dis_fecha', '>=', now()->subDays(3)->toDateString())
+        ->orderByDesc('d.dis_fecha')
+        ->orderByDesc('d.dis_hora')
+        ->get();
 
-        return response()->json([
-            'data'  => $rows,
-            'total'=> $rows->count(),
-        ]);
-    }
+    return response()->json([
+        'data'  => $rows,
+        'total' => $rows->count(),
+    ]);
+}
+
 }
