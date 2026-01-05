@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="register-form">
-    <h2 class="mb-4 text-center">Registro de Usuario</h2>
+    <h2 class="mb-4 text-center">Registro de Usuarios de taxstas</h2>
 
     <form method="POST" action="{{ route('register') }}">
         @csrf
