@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container py-4">
-    <h2 class="mb-4 text-center">ASIGNA SERVICIOS</h2>
+    <h2 class="mb-4 text-center">ASIGNA SERVICIOS PRUEBA</h2>
 
     {{-- Formulario vertical: Usuario -> Dirección --}}
     <div class="row justify-content-center">
