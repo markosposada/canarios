@@ -137,7 +137,7 @@
 
             <div class="d-flex justify-content-between align-items-center mt-3 auth-links" style="font-size: .95rem;">
               <a href="{{ route('password.request') }}">¿Olvidó su contraseña?</a>
-              <a href="{{ route('register') }}">Registrarse</a>
+              <a href="{{ route('taxistas.create') }}">Registrarse</a>
             </div>
           </form>
         </div>
