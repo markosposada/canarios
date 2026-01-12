@@ -20,6 +20,9 @@ use App\Http\Controllers\Operadora\SancionesController;
 use App\Http\Controllers\Operadora\FacturacionController;
 use App\Http\Controllers\Operadora\RecaudoController;
 use App\Http\Controllers\Operadora\RecaudoHistorialController;
+//ruta vista temporal formulario taxistas
+use App\Http\Controllers\TaxistaController;
+
 
 
 
@@ -173,6 +176,12 @@ Route::get('/barrios/sugerencias', [BarrioController::class, 'sugerencias'])->na
     ->name('servicios.audio');
 
 
+//ruta temporal formulario taxitas
+Route::get('/taxistas/crear', [TaxistaController::class, 'create'])->name('taxistas.create');
+Route::post('/taxistas', [TaxistaController::class, 'store'])->name('taxistas.store');
+Route::get('/taxistas/guardado', function () {
+    return view('taxistas.success');
+})->name('taxistas.success');
 
 
 
