@@ -117,68 +117,82 @@ class SancionesController extends Controller
      * vigente = now < fin
      * minutos_restantes (si vigente)
      */
+    /**
+     * Listado de sanciones recientes (ÚLTIMOS 3 DÍAS)
+     */
     public function listar(Request $request)
-{
-    $limit = (int)($request->get('limit', 100));
-    if ($limit <= 0 || $limit > 500) $limit = 100;
+    {
+        $limit = (int)($request->get('limit', 100));
+        if ($limit <= 0 || $limit > 500) $limit = 100;
 
-    // "Ahora" en Bogotá, como string para SQL
-    $now = Carbon::now('America/Bogota')->format('Y-m-d H:i:s');
+        // "Ahora" en Bogotá (Objeto Carbon)
+        $nowCarbon = Carbon::now('America/Bogota');
+        
+        // Formato string para las comparaciones SQL RAW
+        $nowStr = $nowCarbon->format('Y-m-d H:i:s');
 
-    $rows = DB::table('sancion as s')
-        ->join('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
-        ->leftJoin('conductores as c', 'c.conduc_cc', '=', 's.sancion_condu')
-        ->selectRaw("
-            s.sancion_id,
-            s.sancion_movil,
-            s.sancion_condu,
-            COALESCE(c.conduc_nombres,'') as conductor,
+        // Calcular fecha de hace 3 días
+        $fechaLimite = $nowCarbon->copy()->subDays(3)->toDateString(); 
 
-            s.sancion_tipo,
-            t.tpsa_sancion as tipo,
-            t.tpsa_horas as horas,
-            t.tpsa_valor as valor,
+        $rows = DB::table('sancion as s')
+            ->join('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
+            ->leftJoin('conductores as c', 'c.conduc_cc', '=', 's.sancion_condu')
+            
+            // --- NUEVO FILTRO: Solo fecha mayor o igual a hace 3 días ---
+            ->where('s.sancion_fecha', '>=', $fechaLimite)
+            // -----------------------------------------------------------
 
-            s.sancion_fecha as fecha,
-            s.sancion_hora  as hora,
-            s.sancion_operadora as operadora,
+            ->selectRaw("
+                s.sancion_id,
+                s.sancion_movil,
+                s.sancion_condu,
+                COALESCE(c.conduc_nombres,'') as conductor,
 
-            -- nuevos campos (opción A)
-            s.sancion_activa,
-            s.sancion_levantada_fecha,
-            s.sancion_levantada_hora,
-            s.sancion_levantada_operadora,
-            s.sancion_levantada_motivo,
+                s.sancion_tipo,
+                t.tpsa_sancion as tipo,
+                t.tpsa_horas as horas,
+                t.tpsa_valor as valor,
 
-            TIMESTAMP(s.sancion_fecha, s.sancion_hora) as inicio,
-            TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) as fin,
+                s.sancion_fecha as fecha,
+                s.sancion_hora  as hora,
+                s.sancion_operadora as operadora,
 
-            CASE
-              WHEN s.sancion_activa = 1
-               AND TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) > ?
-              THEN 1 ELSE 0
-            END as vigente,
+                s.sancion_activa,
+                s.sancion_levantada_fecha,
+                s.sancion_levantada_hora,
+                s.sancion_levantada_operadora,
+                s.sancion_levantada_motivo,
 
-            CASE
-              WHEN s.sancion_activa = 1
-               AND TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) > ?
-              THEN TIMESTAMPDIFF(
-                MINUTE,
-                ?,
-                TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora))
-              )
-              ELSE 0
-            END as minutos_restantes
-        ", [$now, $now, $now])
-        ->orderByDesc('s.sancion_id')
-        ->limit($limit)
-        ->get();
+                TIMESTAMP(s.sancion_fecha, s.sancion_hora) as inicio,
+                TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) as fin,
 
-    return response()->json([
-        'data'  => $rows,
-        'total' => $rows->count(),
-    ]);
-}
+                CASE 
+                  WHEN s.sancion_activa = 1 
+                   AND TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) > ? 
+                  THEN 1 ELSE 0 
+                END as vigente,
+
+                CASE 
+                  WHEN s.sancion_activa = 1 
+                   AND TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora)) > ? 
+                  THEN TIMESTAMPDIFF(
+                    MINUTE, 
+                    ?, 
+                    TIMESTAMPADD(HOUR, t.tpsa_horas, TIMESTAMP(s.sancion_fecha, s.sancion_hora))
+                  ) 
+                  ELSE 0 
+                END as minutos_restantes
+            ", [$nowStr, $nowStr, $nowStr])
+            ->orderByDesc('s.sancion_id')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'data'  => $rows,
+            'total' => $rows->count(),
+        ]);
+    }
+
 
 
     public function levantar(Request $request, $id)

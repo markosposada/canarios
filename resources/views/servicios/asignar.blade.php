@@ -32,7 +32,7 @@
             </div>
 
             {{-- Botones (solo Agregar + Limpiar arriba) --}}
-            <div class="mt-4 d-flex gap-2">
+            <div class="mt-4 d-flex justify-content-between">
                 <button id="btnAgregarServicio" class="btn btn-primary">
                     ➕ Agregar
                 </button>
@@ -80,11 +80,11 @@
                     </div>
 
                     {{-- Botón grande debajo de la tabla --}}
-                    <div class="mt-3 d-grid">
+                    <!--<div class="mt-3 d-grid">
                         <button id="btnAbrirModal" class="btn btn-dark btn-lg">
                             🚕 ASIGNAR SERVICIO
                         </button>
-                    </div>
+                    </div> -->
 
                     <small class="text-muted d-block mt-2">
                         Tip: agrega varios servicios y luego asigna uno por uno.
@@ -741,11 +741,11 @@ async function asignar(mo_id) {
         const urlConsulta = URL_CONSULTA_TOKEN_BASE + encodeURIComponent(token);
 
         const texto = [
-          '✅ Servicio asignado',
+          '🚖 Su taxi va en camino.',
+          'La información del servicio es la siguiente:',
           `🚕 Móvil: ${movil}`,
-          `🔖 Placa: ${placa}`,
-          `🔑 Código (24h): ${token}`,
-          `🔗 Consulta: ${urlConsulta}`
+          `🔖 Placa: ${placa}`,          
+          `Puede ampliar la información ingresando este codigo ${token} en el siguiente enlace🔗: ${urlConsulta}`
         ].join('\n');
 
         const ok = await copiarAlPortapapeles(texto);

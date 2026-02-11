@@ -12,42 +12,191 @@
 <div class="row">
   <div class="col-12 grid-margin stretch-card">
     <div class="card">
-      <div class="card-body">
+      <div class="card-body p-2 p-md-3">
 
-        <div class="d-flex align-items-center justify-content-between">
-          <h4 class="card-title mb-0">Sanciones recientes</h4>
-          <div class="d-flex" style="gap:8px;">
-            <button class="btn btn-sm btn-outline-primary" id="btnRefrescar" type="button">Refrescar</button>
-            <a href="{{ route('operadora.sancionar') }}" class="btn btn-sm btn-outline-secondary">Ir a Sancionar</a>
+        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mb-2">
+          <h4 class="card-title mb-0 fs-6">Sanciones Recientes</h4>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-sm btn-outline-primary px-2 py-1" id="btnRefrescar" type="button">
+              <i class="mdi mdi-refresh"></i> Refrescar
+            </button>
+            <a href="{{ route('operadora.sancionar') }}" class="btn btn-sm btn-outline-secondary px-2 py-1">
+              Ir a Sancionar
+            </a>
           </div>
         </div>
 
-        <div class="table-responsive mt-3">
-          <table class="table table-striped" id="tablaSanciones">
-            <thead>
+        <div class="table-responsive mt-2">
+          <table class="table table-hover table-sm tabla-sanciones" id="tablaSanciones">
+            <thead class="table-light">
               <tr>
-                <th style="width:60px;">#</th>
-                <th>Móvil</th>
-                <th>Conductor</th>
-                <th>Tipo</th>
-                <th>Fecha</th>
-                <th>Operadora</th>
-                <th>Estado</th>
-                <th style="width:120px;">Acciones</th>
+                <th style="min-width:50px;">Móvil</th>
+                <th style="min-width:140px;">Conductor</th>
+                <th style="min-width:110px;">Tipo</th>
+                <th style="min-width:100px;">Fecha</th>
+                <th style="min-width:65px;">Oper.</th>
+                <th style="min-width:120px;">Estado</th>
+                <th style="min-width:85px;">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="8" class="text-muted text-center">Cargando...</td></tr>
+              <tr><td colspan="7" class="text-muted text-center py-3">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
 
         <style>
-          .badge-soft{ padding:.35rem .55rem; border-radius:999px; font-weight:800; font-size:12px; display:inline-block; }
-          .badge-vigente{ background:#d1fae5; color:#065f46; border:1px solid #10b981; }
-          .badge-vencida{ background:#fee2e2; color:#991b1b; border:1px solid #ef4444; }
-          .badge-levantada{ background:#e5e7eb; color:#111827; border:1px solid #9ca3af; }
-          .small-muted{ font-size:12px; color:#6c757d; }
+          /* Estilos de badges optimizados */
+          .badge-soft{ 
+            padding:.2rem .4rem; 
+            border-radius:12px; 
+            font-weight:600; 
+            font-size:10px; 
+            display:inline-block;
+            white-space:nowrap;
+            line-height:1.2;
+          }
+          .badge-vigente{ 
+            background:#d1fae5; 
+            color:#065f46; 
+            border:1px solid #10b981; 
+          }
+          .badge-vencida{ 
+            background:#fee2e2; 
+            color:#991b1b; 
+            border:1px solid #ef4444; 
+          }
+          .badge-levantada{ 
+            background:#e5e7eb; 
+            color:#111827; 
+            border:1px solid #9ca3af; 
+          }
+          
+          .small-muted{ 
+            font-size:10px; 
+            color:#6c757d; 
+            line-height:1.2;
+            margin-top:1px;
+            display:block;
+          }
+
+          /* Optimización global de la tabla */
+          .tabla-sanciones {
+            font-size: 12px;
+            margin-bottom: 0;
+          }
+
+          .tabla-sanciones td {
+            padding: 0.4rem 0.3rem;
+            vertical-align: middle;
+            border-color: #e9ecef;
+          }
+
+          .tabla-sanciones th {
+            padding: 0.5rem 0.3rem;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+          }
+
+          .tabla-sanciones tbody tr:hover {
+            background-color: #f8f9fa;
+          }
+
+          /* Contenedor responsive mejorado */
+          .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 -8px;
+            padding: 0 8px;
+          }
+
+          /* Ajustes para botones */
+          .btn-sm {
+            padding: 0.2rem 0.4rem;
+            font-size: 11px;
+            line-height: 1.3;
+          }
+
+          /* Texto conductor compacto */
+          .conductor-nombre {
+            font-weight: 500;
+            margin-bottom: 1px;
+            line-height: 1.2;
+          }
+
+          /* Botón deshabilitado con tooltip */
+          .btn-disabled-tooltip {
+            cursor: not-allowed;
+            opacity: 0.5;
+          }
+
+          /* Responsive para tablets */
+          @media (max-width: 991px) {
+            .card-body {
+              padding: 0.75rem !important;
+            }
+
+            .tabla-sanciones {
+              font-size: 11px;
+            }
+
+            .tabla-sanciones th {
+              font-size: 10px;
+              padding: 0.4rem 0.25rem;
+            }
+
+            .tabla-sanciones td {
+              padding: 0.35rem 0.25rem;
+            }
+
+            .badge-soft {
+              font-size: 9px;
+              padding: 0.15rem 0.35rem;
+            }
+
+            .small-muted {
+              font-size: 9px;
+            }
+
+            .btn-sm {
+              font-size: 10px;
+              padding: 0.15rem 0.35rem;
+            }
+          }
+
+          /* Responsive para móviles */
+          @media (max-width: 576px) {
+            .tabla-sanciones {
+              font-size: 10px;
+            }
+
+            h3.mb-1 {
+              font-size: 1.2rem;
+            }
+
+            .fs-6 {
+              font-size: 0.9rem !important;
+            }
+          }
+
+          /* Mejorar el scroll horizontal en touch devices */
+          @media (hover: none) {
+            .table-responsive {
+              scrollbar-width: thin;
+            }
+            
+            .table-responsive::-webkit-scrollbar {
+              height: 6px;
+            }
+            
+            .table-responsive::-webkit-scrollbar-thumb {
+              background-color: rgba(0,0,0,0.2);
+              border-radius: 3px;
+            }
+          }
         </style>
 
       </div>
@@ -57,22 +206,22 @@
 
 {{-- Modal: Levantar sanción --}}
 <div class="modal fade" id="modalLevantar" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Levantar sanción</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-warning py-2">
+        <div class="alert alert-warning py-2 px-3">
           Esta acción <strong>no elimina</strong> la sanción, solo la marca como levantada y guarda el motivo.
         </div>
 
         <input type="hidden" id="levantarId" value="">
 
         <div class="mb-2">
-          <label class="form-label fw-bold">Motivo (obligatorio)</label>
-          <textarea class="form-control" id="levantarMotivo" rows="3" maxlength="255"
+          <label class="form-label fw-bold mb-1">Motivo (obligatorio)</label>
+          <textarea class="form-control form-control-sm" id="levantarMotivo" rows="3" maxlength="255"
                     placeholder="Ej: Se verificó y fue un error / Se solucionó el problema"></textarea>
           <div class="small-muted mt-1">Máximo 255 caracteres.</div>
         </div>
@@ -80,8 +229,8 @@
         <div id="msgLevantar"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-success" id="btnConfirmLevantar">Levantar</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-success" id="btnConfirmLevantar">Levantar</button>
       </div>
     </div>
   </div>
@@ -118,20 +267,42 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(()=>{ msgLevantar.innerHTML=''; }, 3500);
   }
 
+  // Función para verificar si han pasado más de 24 horas desde la sanción
+  function hasPasado24Horas(fecha, hora) {
+    if (!fecha || !hora) return false;
+    
+    try {
+      // Asumiendo formato YYYY-MM-DD para fecha y HH:MM:SS para hora
+      const fechaHoraSancion = new Date(fecha + ' ' + hora);
+      const ahora = new Date();
+      
+      // Calcular diferencia en milisegundos
+      const diferenciaMilisegundos = ahora - fechaHoraSancion;
+      
+      // Convertir a horas (1000ms * 60seg * 60min = 1 hora)
+      const diferenciaHoras = diferenciaMilisegundos / (1000 * 60 * 60);
+      
+      return diferenciaHoras > 24;
+    } catch (e) {
+      console.error('Error al calcular tiempo transcurrido:', e);
+      return false;
+    }
+  }
+
   function badgeEstado(r) {
     const activa = parseInt(r.sancion_activa ?? 1) === 1;
     const vigente = parseInt(r.vigente ?? 0) === 1;
 
     if (!activa) {
       const extra = (r.sancion_levantada_fecha || r.sancion_levantada_hora)
-        ? `<div class="small-muted">Levantada: ${escapeHtml(r.sancion_levantada_fecha || '')} ${escapeHtml(r.sancion_levantada_hora || '')}</div>
-           <div class="small-muted">Por: ${escapeHtml(r.sancion_levantada_operadora || '')}</div>`
+        ? `<div class="small-muted">Lev: ${escapeHtml(r.sancion_levantada_fecha || '')} ${escapeHtml(r.sancion_levantada_hora || '')}</div>
+           <div class="small-muted">${escapeHtml(r.sancion_levantada_operadora ? r.sancion_levantada_operadora.substring(0,10) : '')}</div>`
         : '';
       return `<span class="badge-soft badge-levantada">LEVANTADA</span>${extra}`;
     }
 
     if (vigente) {
-      return `<span class="badge-soft badge-vigente">VIGENTE (${escapeHtml(r.minutos_restantes)} min)</span>`;
+      return `<span class="badge-soft badge-vigente">VIGENTE (${escapeHtml(r.minutos_restantes)}m)</span>`;
     }
 
     return `<span class="badge-soft badge-vencida">VENCIDA</span>`;
@@ -139,8 +310,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function btnAcciones(r) {
     const activa = parseInt(r.sancion_activa ?? 1) === 1;
-    if (!activa) return `<span class="text-muted">—</span>`;
-    return `<button class="btn btn-sm btn-outline-success btn-levantar" data-id="${r.sancion_id}">Levantar</button>`;
+    
+    // Si ya está levantada, no mostrar botón
+    if (!activa) {
+      return `<span class="text-muted">—</span>`;
+    }
+    
+    // Verificar si han pasado más de 24 horas
+    const paso24h = hasPasado24Horas(r.fecha, r.hora);
+    
+    if (paso24h) {
+      return `<button class="btn btn-sm btn-outline-secondary btn-disabled-tooltip" 
+                      disabled 
+                      title="No se puede levantar después de 24 horas">
+                Expirado
+              </button>`;
+    }
+    
+    // Botón normal si está dentro de las 24 horas
+    return `<button class="btn btn-sm btn-outline-success btn-levantar" 
+                    data-id="${r.sancion_id}">
+              Levantar
+            </button>`;
   }
 
   function attachLevantarHandlers() {
@@ -172,25 +363,31 @@ document.addEventListener('DOMContentLoaded', function () {
         tbody.innerHTML = '';
 
         if (!rows.length) {
-          tbody.innerHTML = `<tr><td colspan="8" class="text-muted text-center">Sin sanciones recientes.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="7" class="text-muted text-center py-3">Sin sanciones recientes.</td></tr>`;
           return;
         }
 
-        rows.forEach((r, idx) => {
+        rows.forEach((r) => {
           const tr = document.createElement('tr');
+          const operadoraCorta = (r.operadora || '').substring(0, 6);
+          const conductorNombre = escapeHtml(r.conductor || '').split(' ')[0] + ' ' + (escapeHtml(r.conductor || '').split(' ')[1] || '');
+          
           tr.innerHTML = `
-            <td class="fw-bold">${idx+1}</td>
-            <td>${escapeHtml(r.sancion_movil)}</td>
+            <td class="fw-bold">${escapeHtml(r.sancion_movil)}</td>
             <td>
-              ${escapeHtml(r.conductor)}
+              <div class="conductor-nombre" title="${escapeHtml(r.conductor)}">${conductorNombre}</div>
               <div class="small-muted">CC ${escapeHtml(r.sancion_condu)}</div>
             </td>
             <td>
-              ${escapeHtml(r.tipo)} <span class="text-muted">(${escapeHtml(r.horas)}h)</span>
-              ${r.sancion_levantada_motivo ? `<div class="small-muted">Motivo: ${escapeHtml(r.sancion_levantada_motivo)}</div>` : ''}
+              <div>${escapeHtml(r.tipo)}</div>
+              <div class="small-muted">${escapeHtml(r.horas)}h</div>
+              ${r.sancion_levantada_motivo ? `<div class="small-muted" title="${escapeHtml(r.sancion_levantada_motivo)}">Mot: ${escapeHtml(r.sancion_levantada_motivo.substring(0,15))}...</div>` : ''}
             </td>
-            <td>${escapeHtml(r.fecha)} ${escapeHtml(r.hora)}</td>
-            <td>${escapeHtml(r.operadora || '')}</td>
+            <td>
+              <div>${escapeHtml(r.fecha)}</div>
+              <div class="small-muted">${escapeHtml(r.hora)}</div>
+            </td>
+            <td title="${escapeHtml(r.operadora || '')}">${escapeHtml(operadoraCorta)}</td>
             <td>${badgeEstado(r)}</td>
             <td>${btnAcciones(r)}</td>
           `;
@@ -201,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function () {
       })
       .catch(() => {
         const tbody = document.querySelector('#tablaSanciones tbody');
-        tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">Error cargando sanciones.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-danger text-center py-3">Error cargando sanciones.</td></tr>`;
       });
   }
 
