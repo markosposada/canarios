@@ -8,9 +8,9 @@
         <form method="POST" action="{{ route('taxis.updateDates') }}" id="formFechas">
             @csrf
 
-            {{-- PLACA --}}
+            {{-- PLACA ACTUAL (BUSCAR) --}}
             <div class="mb-3">
-                <label for="placa" class="form-label">PLACA</label>
+                <label for="placa" class="form-label">PLACA ACTUAL</label>
                 <div class="input-group">
                     <input type="text" id="placa" name="placa" class="form-control" value="{{ old('placa') }}" required>
                     <button type="button" class="btn btn-outline-secondary" onclick="buscarPlaca()">🔍</button>
@@ -18,8 +18,18 @@
                 @error('placa')<small class="text-danger">{{ $message }}</small>@enderror
             </div>
 
-            {{-- CAMPOS EXTRA: FECHAS --}}
+            {{-- CAMPOS EXTRA: FECHAS + PLACA NUEVA --}}
             <div id="camposFechas" class="d-none">
+
+                {{-- PLACA NUEVA --}}
+                <div class="mb-3">
+                    <label for="placa_nueva" class="form-label">PLACA NUEVA (opcional)</label>
+                    <input type="text" id="placa_nueva" name="placa_nueva" class="form-control"
+                           value="{{ old('placa_nueva') }}"
+                           placeholder="Si deseas cambiarla, escríbela aquí">
+                    @error('placa_nueva')<small class="text-danger">{{ $message }}</small>@enderror
+                </div>
+
                 {{-- SOAT --}}
                 <div class="mb-3">
                     <label for="soat" class="form-label">SOAT</label>
@@ -41,7 +51,7 @@
                 <button type="submit" class="btn btn-primary">ACTUALIZAR</button>
             </div>
 
-            <a href="/" class="btn btn-secondary mt-3">VOLVER</a>
+            
         </form>
     </div>
 </div>
@@ -67,6 +77,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('camposFechas').classList.remove('d-none');
+        // dejamos la placa actual bloqueada si hay errores para no cambiar el registro objetivo
         document.getElementById('placa').readOnly = true;
     });
 </script>
@@ -82,13 +93,16 @@ function buscarPlaca() {
         .then(response => response.json())
         .then(data => {
             if (data.taxi) {
-                Swal.fire({ icon: 'success', title: 'Taxi encontrado', text: 'Puedes modificar las fechas.' });
+                Swal.fire({ icon: 'success', title: 'Taxi encontrado', text: 'Puedes modificar fechas y/o placa.' });
 
                 placaInput.readOnly = true;
                 document.getElementById('camposFechas').classList.remove('d-none');
 
                 document.getElementById('soat').value = data.taxi.ta_soat;
                 document.getElementById('tecno').value = data.taxi.ta_tecno;
+
+                // sugerimos la misma placa como nueva (editable)
+                document.getElementById('placa_nueva').value = data.taxi.ta_placa;
             } else {
                 Swal.fire({ icon: 'error', title: 'No encontrado', text: 'No existe un taxi con esa placa.' });
                 document.getElementById('camposFechas').classList.add('d-none');

@@ -71,24 +71,52 @@ public function buscarPorPlaca(Request $request)
 public function updateDates(Request $request)
 {
     $validated = $request->validate([
-        'placa' => 'required|string|exists:taxi,ta_placa',
+        'placa' => 'required|string|exists:taxi,ta_placa',          // placa actual
+        'placa_nueva' => 'nullable|string',                          // placa nueva (opcional)
         'soat' => 'required|date|after_or_equal:today',
         'tecno' => 'required|date|after_or_equal:today',
     ], [
-        'placa.exists' => 'La placa no está registrada.',
+        'placa.exists' => 'La placa actual no está registrada.',
         'soat.after_or_equal' => 'La fecha de SOAT debe ser desde hoy en adelante.',
         'tecno.after_or_equal' => 'La fecha de tecnomecánica debe ser desde hoy en adelante.',
     ]);
 
-    DB::table('taxi')
-        ->where('ta_placa', strtoupper($validated['placa']))
-        ->update([
-            'ta_soat' => $validated['soat'],
-            'ta_tecno' => $validated['tecno'],
-        ]);
+    $placaActual = strtoupper($validated['placa']);
+    $placaNueva = isset($validated['placa_nueva']) && trim($validated['placa_nueva']) !== ''
+        ? strtoupper(trim($validated['placa_nueva']))
+        : null;
 
-    return redirect()->route('taxis.editDates')->with('success', 'Fechas actualizadas correctamente.');
+    // Si va a cambiar la placa, validar que no exista ya (para evitar duplicados)
+    if ($placaNueva && $placaNueva !== $placaActual) {
+        $existe = DB::table('taxi')->where('ta_placa', $placaNueva)->exists();
+        if ($existe) {
+            return back()
+                ->withErrors(['placa_nueva' => 'La placa nueva ya está registrada.'])
+                ->withInput();
+        }
+    }
+
+    $dataUpdate = [
+        'ta_soat' => $validated['soat'],
+        'ta_tecno' => $validated['tecno'],
+    ];
+
+    if ($placaNueva && $placaNueva !== $placaActual) {
+        $dataUpdate['ta_placa'] = $placaNueva;
+    }
+
+    DB::table('taxi')
+        ->where('ta_placa', $placaActual)
+        ->update($dataUpdate);
+
+    return redirect()
+        ->route('taxis.editDates')
+        ->with('success', $placaNueva && $placaNueva !== $placaActual
+            ? 'Fechas y placa actualizadas correctamente.'
+            : 'Fechas actualizadas correctamente.'
+        );
 }
+
 
 
 public function panel()

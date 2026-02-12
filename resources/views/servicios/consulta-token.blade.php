@@ -129,7 +129,7 @@
       : new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(Number(data.valor));
 
     const $valor = $('<div>').addClass('col-12')
-      .append($('<strong>').text('Valor: '), $('<span>').text(valorFmt));
+      .append($('<strong>').text('Valor Sugerido: '), $('<span>').text(valorFmt));
 
     $row.append($conductor, $movil, $placa, $direccion, $fecha, $hora, $valor);
     $body.append($title, $row);
@@ -158,6 +158,16 @@
       renderEstado('Error de red al consultar el token.', 'danger');
     }
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+  const params = new URLSearchParams(window.location.search);
+  const tokenUrl = (params.get('token') || '').toUpperCase();
+
+  if (/^[A-Z]\d{2}$/.test(tokenUrl)) {
+    $('#inpToken').val(tokenUrl);
+    consultar();
+  }
+});
   </script>
 </body>
 </html>
