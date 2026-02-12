@@ -211,6 +211,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/operadora/sanciones/{id}/levantar', [SancionesController::class, 'levantar'])
         ->name('operadora.sanciones.levantar');
 
+        //cambios
+/*
         Route::get('/operadora/facturacion', [FacturacionController::class, 'vista'])
         ->name('operadora.facturacion');
 
@@ -218,7 +220,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('operadora.facturacion.pendientes');
 
     Route::post('/operadora/facturacion/facturar', [FacturacionController::class, 'facturar'])
-        ->name('operadora.facturacion.facturar');
+        ->name('operadora.facturacion.facturar'); */
 
         Route::get('/operadora/recaudado', [RecaudoController::class, 'vista'])
         ->name('operadora.recaudado');
@@ -244,6 +246,7 @@ Route::get('/operadora/recaudado/historial/listar', [RecaudoHistorialController:
 Route::get('/operadora/recaudado/pendientes-cc', [\App\Http\Controllers\Operadora\RecaudoController::class, 'pendientesPorCedula'])
     ->name('operadora.recaudado.pendientes_cc');
 
+    
     Route::get('/facturacion', [\App\Http\Controllers\Operadora\FacturacionController::class, 'vista'])->name('operadora.facturacion');
 
     Route::get('/facturacion/pendientes-cc', [\App\Http\Controllers\Operadora\FacturacionController::class, 'pendientesPorCedula'])
@@ -253,7 +256,7 @@ Route::get('/operadora/recaudado/pendientes-cc', [\App\Http\Controllers\Operador
         ->name('operadora.facturacion.buscar_conductores');
 
     Route::post('/facturacion/facturar', [\App\Http\Controllers\Operadora\FacturacionController::class, 'facturar'])
-        ->name('operadora.facturacion.facturar');
+        ->name('operadora.facturacion.facturar'); 
 
         Route::get('/facturas-pendientes', [\App\Http\Controllers\Operadora\RecaudoController::class, 'vistaPendientesGlobal'])
         ->name('operadora.facturas_pendientes');
