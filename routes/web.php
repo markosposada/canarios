@@ -22,6 +22,9 @@ use App\Http\Controllers\Operadora\RecaudoController;
 use App\Http\Controllers\Operadora\RecaudoHistorialController;
 //ruta vista temporal formulario taxistas
 use App\Http\Controllers\TaxistaController;
+use App\Http\Controllers\Operadora\EstadoConductorControllerOperadora;
+use App\Http\Controllers\Conductor\FacturacionControllerConductor;
+
 
 
 
@@ -265,6 +268,9 @@ Route::post('/buscar-datos-conductor', [App\Http\Controllers\ConductorController
 
     ->name('conductores.datos');
 
+    Route::get('/operadora/estado-conductor', [EstadoConductorControllerOperadora::class, 'index'])->name('operadora.estado_conductor.index');
+    Route::get('/operadora/estado-conductor/buscar', [EstadoConductorControllerOperadora::class, 'buscar'])->name('operadora.estado_conductor.buscar');
+    Route::post('/operadora/estado-conductor/actualizar', [EstadoConductorControllerOperadora::class, 'actualizar'])->name('operadora.estado_conductor.actualizar');
 
 //fin operadora
 
@@ -277,6 +283,11 @@ Route::post('/buscar-datos-conductor', [App\Http\Controllers\ConductorController
 
     
     //codigo nuevo
+
+    Route::get('/conductor/facturacion',[FacturacionControllerConductor::class, 'index'])->name('conductor.facturacion.index');
+
+Route::get('/conductor/facturacion/listar',[FacturacionControllerConductor::class, 'listar'])->name('conductor.facturacion.listar');
+
      Route::get('/conductor/servicios-asignados', [ServiciosAsignadosController::class, 'index'])
         ->name('conductor.servicios_asignados');
 

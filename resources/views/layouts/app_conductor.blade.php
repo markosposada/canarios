@@ -60,6 +60,13 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+    <a class="nav-link" href="{{ route('conductor.facturacion.index') }}">
+        <i class="mdi mdi-cash menu-icon"></i>
+        <span class="menu-title">Facturación</span>
+    </a>
+</li>
+
                
 
                 <li class="nav-item">

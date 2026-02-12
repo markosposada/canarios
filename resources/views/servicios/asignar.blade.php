@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container py-4">
-    <h2 class="mb-4 text-center">ASIGNA SERVICIOS PRUEBA</h2>
+    <h2 class="mb-4 text-center">ASIGNA SERVICIOS</h2>
 
     {{-- Formulario vertical: Usuario -> Dirección --}}
     <div class="row justify-content-center">
@@ -12,7 +12,13 @@
                 <label class="form-label">Cliente / Usuario</label>
                 <div class="input-group">
                     <input type="text" id="inpUsuario" class="form-control" placeholder="Nombre del cliente" autofocus>
-                    <button type="button" class="btn btn-outline-secondary" id="btnMicUsuario" title="Dictar usuario">🎤</button>
+                    <button type="button"
+        class="btn btn-outline-secondary btn-lg"
+        id="btnMicUsuario"
+        style="min-width: 45px; font-size: 20px;"
+        title="Dictar usuario">
+    🎤
+</button>
                 </div>
             </div>
 
@@ -21,9 +27,13 @@
                 <div class="input-group">
                     <input type="text" id="inpDireccion" class="form-control" placeholder="Calle, No, etc.">
                     {{-- Botón único: transcribe en vivo + graba audio --}}
-                    <button type="button" class="btn btn-outline-secondary" id="btnVoiceDireccion" title="Grabar y transcribir dirección">
-                        🎤⏺️
-                    </button>
+                    <button type="button"
+        class="btn btn-outline-secondary btn-lg"
+        id="btnVoiceDireccion"
+        style="min-width: 45px; font-size: 20px;"
+        title="Grabar y transcribir dirección">
+    🎤⏺️
+</button>
                 </div>
                 <input type="hidden" id="direccionAudioPath">
                 <div class="mt-1">

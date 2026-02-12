@@ -54,6 +54,25 @@
       ->select('dis_dire', 'dis_usuario')
       ->first();
   }
+
+    // ✅ Facturación últimos 5 días (incluye hoy)
+  $desdeFact = now()->setTimezone('America/Bogota')->subDays(5)->format('Y-m-d');
+
+  $fact = DB::table('facturacion_operadora as fo')
+    ->where('fo.fo_conductor', $cedula)
+    ->whereDate('fo.fo_fecha', '>=', $desdeFact)
+    ->selectRaw('
+        COUNT(*) as registros,
+        COALESCE(SUM(fo.fo_total),0) as facturado,
+        COALESCE(SUM(CASE WHEN fo.fo_pagado = 1 THEN fo.fo_total ELSE 0 END),0) as pagado,
+        COALESCE(SUM(CASE WHEN fo.fo_pagado = 0 THEN fo.fo_total ELSE 0 END),0) as debe
+    ')
+    ->first();
+
+  $factDebe = (int)($fact->debe ?? 0);
+  $factPagado = (int)($fact->pagado ?? 0);
+  $factFacturado = (int)($fact->facturado ?? 0);
+
 @endphp
 
 <div class="row mb-3">
@@ -154,6 +173,28 @@
       </div>
     </a>
   </div>
+
+  {{-- Facturación últimos 5 días --}}
+<div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
+  <a class="dash-link" href="{{ route('conductor.facturacion.index') }}">
+    <div class="card dash-card">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <p class="mb-1 text-muted dash-title">Facturación (5 días)</p>
+          <h5 class="mb-0 {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}">
+            {{ '$' . number_format($factDebe, 0, ',', '.') }}
+          </h5>
+          <p class="dash-sub mt-1">
+            Debe · Pagado: <span class="mini-pill">{{ '$' . number_format($factPagado, 0, ',', '.') }}</span>
+          </p>
+        </div>
+        <div class="dash-icon">
+          <i class="mdi mdi-cash mdi-28px {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}"></i>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
 
 
 

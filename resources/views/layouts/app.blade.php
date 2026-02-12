@@ -128,7 +128,12 @@
                 </a>
                 <div class="collapse" id="menu-conductores" data-parent="#sidebar">
                     <ul class="nav flex-column sub-menu">
-                        <li class="nav-item"><a class="nav-link" href="{{ url('/conductores') }}">Estado</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url('/conductores') }}">Estado Moviles</a></li>
+                        <li class="nav-item">
+    <a class="nav-link" href="{{ route('operadora.estado_conductor.index') }}">
+        Estado Conductor
+    </a>
+</li>
                         <li class="nav-item"><a class="nav-link" href="{{ url('/register') }}">Agregar</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url('/conductores/editar-licencia') }}">Editar</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url('/conductores/asignar') }}">Asignar Movil</a></li>
