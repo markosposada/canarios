@@ -1,54 +1,76 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container py-4">
-    <h2 class="mb-4 text-center">ASIGNA SERVICIOS</h2>
+
+{{-- ✅ OJO: me dijiste que el CSS lo pondrás en el layout.
+     Aquí NO lo incluyo para que quede limpio. --}}
+
+<div class="container page-wrap">
+    <h2 class="text-center page-title">ASIGNA SERVICIOS</h2>
 
     {{-- Formulario vertical: Usuario -> Dirección --}}
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8">
+        {{-- ✅ En móvil usa todo el ancho (px-0), en desktop vuelve a padding --}}
+        <div class="col-12 col-md-10 col-lg-8 px-0 px-md-2">
 
+            {{-- Usuario --}}
             <div class="mb-3">
                 <label class="form-label">Cliente / Usuario</label>
-                <div class="input-group">
+
+                <div class="d-flex align-items-stretch gap-2">
                     <input type="text" id="inpUsuario" class="form-control" placeholder="Nombre del cliente" autofocus>
+
                     <button type="button"
-                            class="btn btn-outline-secondary btn-lg"
+                            class="btn btn-outline-secondary btn-sm icon-btn"
                             id="btnMicUsuario"
-                            style="min-width: 45px; font-size: 20px;"
                             title="Dictar usuario">
                         🎤
                     </button>
                 </div>
             </div>
 
+            {{-- Dirección --}}
             <div class="mb-3">
                 <label class="form-label">Dirección</label>
-                <div class="input-group">
-                    <input type="text" id="inpDireccion" class="form-control" placeholder="Calle, No, etc.">
-                    {{-- Botón único: transcribe + graba --}}
+
+                {{-- ✅ gap-2 entre input y botones + espacio entre botones --}}
+                <div class="d-flex align-items-stretch gap-2">
+                    <input type="text"
+                           id="inpDireccion"
+                           class="form-control"
+                           placeholder="Calle, No, etc."
+                           autocomplete="street-address"
+                           inputmode="text">
+
                     <button type="button"
-                            class="btn btn-outline-secondary btn-lg"
-                            id="btnVoiceDireccion"
-                            style="min-width: 45px; font-size: 20px;"
-                            title="Grabar y transcribir dirección">
-                        🎤⏺️
+                            class="btn btn-outline-secondary btn-sm icon-btn"
+                            id="btnDictarDireccion"
+                            title="Dictar dirección">
+                        🎤
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm icon-btn"
+                            id="btnGrabarDireccion"
+                            title="Grabar audio de la dirección">
+                        ⏺️
                     </button>
                 </div>
 
                 <input type="hidden" id="direccionAudioPath">
 
-                <div class="mt-1">
-                    <small class="text-muted">Tip: 1er clic para iniciar, 2do clic para detener y guardar.</small>
-                </div>
+                <small class="text-muted help-tip d-block mt-1">
+                    Tip: usa 🎤 para dictar o ⏺️ para grabar audio (no al mismo tiempo).
+                </small>
             </div>
 
-            <div class="mt-4 d-flex justify-content-between">
-                <button id="btnAgregarServicio" class="btn btn-primary">
+            {{-- Botones --}}
+            <div class="mt-3 d-flex justify-content-between gap-2">
+                <button id="btnAgregarServicio" class="btn btn-primary btn-action">
                     ➕ Agregar
                 </button>
 
-                <button id="btnLimpiar" class="btn btn-outline-secondary" type="button">
+                <button id="btnLimpiar" class="btn btn-outline-secondary btn-action" type="button">
                     🧹 Limpiar
                 </button>
             </div>
@@ -58,26 +80,26 @@
 </div>
 
 {{-- Lista de pendientes --}}
-<div class="container pb-4">
+<div class="container pb-3">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8">
+        <div class="col-12 col-md-10 col-lg-8 px-0 px-md-2">
 
-            <div class="card mt-4">
+            <div class="card mt-3">
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between">
                         <h5 class="mb-0">Servicios pendientes</h5>
                         <span class="badge bg-secondary" id="badgePendientes">0</span>
                     </div>
 
-                    <div class="table-responsive mt-3">
+                    <div class="table-responsive mt-2">
                         <table class="table table-sm align-middle" id="tablaPendientes">
                             <thead>
                                 <tr>
-                                    <th style="width:60px">#</th>
+                                    <th style="width:50px">#</th>
                                     <th>Usuario</th>
                                     <th>Dirección</th>
-                                    <th style="width:80px" class="text-center">Audio</th>
-                                    <th style="width:190px" class="text-end">Acción</th>
+                                    <th style="width:70px" class="text-center">Audio</th>
+                                    <th style="width:150px" class="text-end">Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -102,7 +124,8 @@
 
 {{-- Modal: Lista de móviles activos --}}
 <div class="modal fade" id="modalMoviles" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+  {{-- ✅ Quité modal-lg para que en móvil no sea tan “gigante” --}}
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
 
       <div class="modal-header flex-column align-items-stretch">
@@ -111,7 +134,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
 
-        <div class="alert alert-primary text-center py-2 mb-3 mt-3 fw-bold">
+        <div class="alert alert-primary text-center py-2 mb-2 mt-3 fw-bold">
           📍 <span id="modalDireccionServicio">Dirección no definida</span>
         </div>
 
@@ -126,11 +149,11 @@
             <table class="table table-hover align-middle text-center" id="tablaMoviles">
                 <thead class="table-dark">
                     <tr>
-                        <th>MÓVIL</th>
-                        <th>CONDUCTOR</th>
-                        <th>PLACA</th>
-                        <th>CANTIDAD (hoy)</th>
                         <th>ACCIÓN</th>
+    <th>MÓVIL</th>
+    <th>CANTIDAD</th>
+    <th>CONDUCTOR</th>
+    <th>PLACA</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -175,7 +198,6 @@ if (!csrfToken) {
   const OPERADORA = 'No autenticado';
 @endauth
 
-// ✅ URL base futura para consulta por token
 const URL_CONSULTA_TOKEN_BASE = "{{ url('/servicios/consulta') }}?token=";
 
 /* =========================================================
@@ -206,7 +228,7 @@ async function copiarAlPortapapeles(texto) {
 }
 
 /* =========================================================
-   Speech Recognition helper (Usuario)
+   1) SpeechRecognition (Usuario)
    ========================================================= */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -243,7 +265,7 @@ function attachMicSimple(buttonId, inputId, lang = 'es-CO') {
     recognition.onerror = (e) => {
         console.error('Speech error:', e);
         let msg = 'No se pudo usar el dictado por voz.';
-        if (e.error === 'network') msg = 'Falló el dictado (network). Prueba Chrome/Edge y HTTPS.';
+        if (e.error === 'network') msg = 'Falló el dictado (network). Prueba Chrome/Edge.';
         if (e.error === 'not-allowed') msg = 'Permiso de micrófono bloqueado. Revisa el candado del navegador.';
         Swal.fire('Dictado por voz', msg, 'warning');
     };
@@ -258,27 +280,22 @@ function attachMicSimple(buttonId, inputId, lang = 'es-CO') {
     btn.addEventListener('click', () => {
         try { listening ? recognition.stop() : recognition.start(); } catch (err) { console.error(err); }
     });
+
+    return recognition;
 }
 
 attachMicSimple('btnMicUsuario', 'inpUsuario', 'es-CO');
 
 /* =========================================================
-   Dirección: UN SOLO botón (graba + transcribe)
-   - Orden CORRECTO para Android: primero grabación (permiso),
-     luego SpeechRecognition.
-   - Modo estable Android: continuous=false, interim=false
+   2) Dirección: DOS BOTONES (🎤 dictado) + (⏺️ grabación)
    ========================================================= */
-let dir_isRunning = false;
+let dir_dict_listening = false;
+let dir_dict_recognition = null;
 
-// Speech
-let dir_recognition = null;
-
-// Record
+let dir_rec_isRecording = false;
 let dir_mediaRecorder = null;
 let dir_stream = null;
 let dir_audioChunks = [];
-
-// Pending audio
 let dir_pendingBlob = null;
 let dir_pendingUrl = null;
 
@@ -320,43 +337,68 @@ async function subirAudioDireccion(blob) {
   return data;
 }
 
-function startTranscriptionDireccion() {
-  if (!SpeechRecognition) throw new Error('Este navegador no soporta SpeechRecognition.');
-
+/* ---- (A) Dictado Dirección ---- */
+function initDictadoDireccion() {
+  const btn = document.getElementById('btnDictarDireccion');
   const input = document.getElementById('inpDireccion');
-  input?.focus();
 
-  dir_recognition = new SpeechRecognition();
-  dir_recognition.lang = 'es-CO';
+  if (!btn || !input) return;
 
-  // ✅ Modo estable Android
-  dir_recognition.interimResults = false;
-  dir_recognition.continuous = false;
+  if (!SpeechRecognition) {
+    btn.disabled = true;
+    btn.title = 'Tu navegador no soporta dictado por voz';
+    return;
+  }
 
-  dir_recognition.onresult = (event) => {
+  dir_dict_recognition = new SpeechRecognition();
+  dir_dict_recognition.lang = 'es-CO';
+  dir_dict_recognition.interimResults = false;
+  dir_dict_recognition.continuous = false;
+
+  dir_dict_recognition.onstart = () => {
+    dir_dict_listening = true;
+    btn.textContent = '🛑';
+    btn.classList.add('active');
+  };
+
+  dir_dict_recognition.onend = () => {
+    dir_dict_listening = false;
+    btn.textContent = '🎤';
+    btn.classList.remove('active');
+  };
+
+  dir_dict_recognition.onerror = (e) => {
+    console.error('Dictado Dirección error:', e);
+    let msg = 'No se pudo dictar la dirección.';
+    if (e.error === 'not-allowed') msg = 'Permiso de micrófono bloqueado.';
+    if (e.error === 'network') msg = 'Falló el dictado (network).';
+    Swal.fire('Dictado', msg, 'warning');
+  };
+
+  dir_dict_recognition.onresult = (event) => {
     const txt = (event.results?.[0]?.[0]?.transcript || '').trim();
     if (!txt) return;
     input.value = joinText(input.value, txt);
   };
 
-  dir_recognition.onerror = (e) => {
-    console.error('Speech error:', e);
-    let msg = 'Falló la transcripción.';
-    if (e.error === 'network') msg = 'Falló la transcripción (network). Prueba Chrome/Edge y HTTPS.';
-    if (e.error === 'not-allowed') msg = 'Permiso de micrófono bloqueado para transcripción.';
-    Swal.fire('Transcripción', msg, 'warning');
-  };
-
-  dir_recognition.start();
+  btn.addEventListener('click', () => {
+    if (dir_rec_isRecording) {
+      Swal.fire('Grabación en curso', 'Detén la grabación ⏺️ antes de dictar 🎤.', 'warning');
+      return;
+    }
+    input.focus();
+    try { dir_dict_listening ? dir_dict_recognition.stop() : dir_dict_recognition.start(); }
+    catch (err) { console.error(err); }
+  });
 }
 
+/* ---- (B) Grabación Dirección ---- */
 async function startRecordingDireccion() {
   if (!navigator.mediaDevices?.getUserMedia) throw new Error('Tu navegador no soporta grabación de audio.');
 
   dir_stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   dir_audioChunks = [];
 
-  // Nota: algunos Android no aceptan mimeType fijo. Probamos y hacemos fallback.
   let options = {};
   if (MediaRecorder.isTypeSupported?.('audio/webm;codecs=opus')) options = { mimeType: 'audio/webm;codecs=opus' };
   else if (MediaRecorder.isTypeSupported?.('audio/webm')) options = { mimeType: 'audio/webm' };
@@ -399,13 +441,7 @@ async function startRecordingDireccion() {
 
     if (result.isConfirmed) {
       try {
-        Swal.fire({
-          title: 'Subiendo audio...',
-          text: 'Espere un momento',
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading()
-        });
-
+        Swal.fire({ title: 'Subiendo audio...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         await subirAudioDireccion(dir_pendingBlob);
         resetPendingAudio();
         Swal.fire('OK', 'Audio guardado ✅', 'success');
@@ -416,11 +452,9 @@ async function startRecordingDireccion() {
         Swal.fire('Error', 'No se pudo subir el audio. Revisa el backend.', 'error');
       }
     } else if (result.isDenied) {
-      $('#inpDireccion').val('');
       $('#direccionAudioPath').val('');
       resetPendingAudio();
-
-      toggleVoiceDireccion(true).catch(err => {
+      toggleGrabacionDireccion(true).catch(err => {
         console.error(err);
         Swal.fire('Error', 'No se pudo iniciar la regrabación.', 'error');
       });
@@ -433,51 +467,53 @@ async function startRecordingDireccion() {
   dir_mediaRecorder.start();
 }
 
-async function toggleVoiceDireccion(forceStart = false) {
-  const btn = document.getElementById('btnVoiceDireccion');
-
-  // START
-  if (!dir_isRunning || forceStart) {
-    $('#direccionAudioPath').val('');
-    resetPendingAudio();
-
-    dir_isRunning = true;
-    btn.textContent = '🛑';
-    btn.classList.remove('btn-outline-secondary');
-    btn.classList.add('btn-danger');
-
-    // ✅ ORDEN CORRECTO en Android
-    await startRecordingDireccion();                 // 1) permiso + grabación
-    document.getElementById('inpDireccion')?.focus();// 2) foco
-    startTranscriptionDireccion();                   // 3) speech
-
-    return;
-  }
-
-  // STOP
-  dir_isRunning = false;
-  btn.textContent = '🎤⏺️';
-  btn.classList.add('btn-outline-secondary');
-  btn.classList.remove('btn-danger');
-
-  try { dir_recognition?.stop(); } catch (_) {}
+async function stopRecordingDireccion() {
   try { dir_mediaRecorder?.stop(); } catch (_) {}
   try { dir_stream?.getTracks()?.forEach(t => t.stop()); } catch (_) {}
 }
 
-document.getElementById('btnVoiceDireccion')?.addEventListener('click', () => {
-  toggleVoiceDireccion().catch(err => {
+async function toggleGrabacionDireccion(forceStart = false) {
+  const btn = document.getElementById('btnGrabarDireccion');
+
+  if (!dir_rec_isRecording || forceStart) {
+    if (dir_dict_listening) {
+      Swal.fire('Dictado en curso', 'Detén el dictado 🎤 antes de grabar ⏺️.', 'warning');
+      return;
+    }
+
+    $('#direccionAudioPath').val('');
+    resetPendingAudio();
+
+    dir_rec_isRecording = true;
+    btn.textContent = '🛑';
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-danger');
+
+    await startRecordingDireccion();
+    return;
+  }
+
+  dir_rec_isRecording = false;
+  btn.textContent = '⏺️';
+  btn.classList.add('btn-outline-secondary');
+  btn.classList.remove('btn-danger');
+
+  await stopRecordingDireccion();
+}
+
+document.getElementById('btnGrabarDireccion')?.addEventListener('click', () => {
+  toggleGrabacionDireccion().catch(err => {
     console.error(err);
-    Swal.fire('Error', err?.message || 'No se pudo iniciar/detener.', 'error');
+    Swal.fire('Error', err?.message || 'No se pudo iniciar/detener la grabación.', 'error');
   });
 });
 
+initDictadoDireccion();
+
 /* =========================================================
-   MÓVILES (modal)
+   3) MÓVILES (modal)
    ========================================================= */
-function cargarMoviles(q = '') {
-    return $.get('{{ route("servicios.moviles") }}', { q });
-}
+function cargarMoviles(q = '') { return $.get('{{ route("servicios.moviles") }}', { q }); }
 
 function pintarTabla(moviles) {
     const $tbody = $('#tablaMoviles tbody').empty();
@@ -488,11 +524,13 @@ function pintarTabla(moviles) {
     moviles.forEach(m => {
         $tbody.append(`
             <tr>
+            <td><button class="btn btn-sm btn-success" onclick="asignar(${m.mo_id})">Disponible</button></td>
                 <td>${m.mo_taxi}</td>
+                <td>${m.cantidad}</td>
                 <td>${m.nombre_conductor ?? ''}</td>
                 <td>${m.placa ?? ''}</td>
-                <td>${m.cantidad}</td>
-                <td><button class="btn btn-sm btn-success" onclick="asignar(${m.mo_id})">Disponible</button></td>
+                
+                
             </tr>
         `);
     });
@@ -519,24 +557,20 @@ $('#inpBuscarMovil').on('input', filtrarMoviles);
 $('#inpBuscarMovil').on('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 
 /* =========================================================
-   PENDIENTES (carrito)
+   4) PENDIENTES (carrito)
    ========================================================= */
 let pendientes = [];
 let idxSeleccionado = null;
 const LS_KEY = 'canarios_pendientes';
 
-function savePendientes() {
-  localStorage.setItem(LS_KEY, JSON.stringify(pendientes));
-}
+function savePendientes() { localStorage.setItem(LS_KEY, JSON.stringify(pendientes)); }
 
 function loadPendientes() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return;
     pendientes = JSON.parse(raw) || [];
-  } catch (_) {
-    pendientes = [];
-  }
+  } catch (_) { pendientes = []; }
 }
 
 function escapeHtml(str) {
@@ -561,11 +595,7 @@ function renderPendientes() {
   $('#badgePendientes').text(pendientes.length);
 
   if (!pendientes.length) {
-    $tbody.append(`
-      <tr>
-        <td colspan="5" class="text-muted text-center">No hay servicios pendientes.</td>
-      </tr>
-    `);
+    $tbody.append(`<tr><td colspan="5" class="text-muted text-center">No hay servicios pendientes.</td></tr>`);
     return;
   }
 
@@ -575,7 +605,7 @@ function renderPendientes() {
       <tr>
         <td>${i + 1}</td>
         <td>${escapeHtml(p.usuario)}</td>
-        <td style="max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${escapeHtml(p.direccion)}
         </td>
         <td class="text-center">${audioTxt}</td>
@@ -588,15 +618,11 @@ function renderPendientes() {
   });
 }
 
-function quitarPendiente(i) {
-  pendientes.splice(i, 1);
-  savePendientes();
-  renderPendientes();
-}
+function quitarPendiente(i) { pendientes.splice(i, 1); savePendientes(); renderPendientes(); }
 
 window.seleccionarPendiente = async function(i) {
-  if (dir_isRunning) {
-    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de asignar.', 'warning');
+  if (dir_rec_isRecording || dir_dict_listening) {
+    Swal.fire('Acción en curso', 'Detén dictado/grabación antes de asignar.', 'warning');
     return;
   }
 
@@ -634,13 +660,12 @@ $('#btnAgregarServicio').on('click', () => {
     return;
   }
 
-  if (dir_isRunning) {
-    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de agregar.', 'warning');
+  if (dir_rec_isRecording || dir_dict_listening) {
+    Swal.fire('Acción en curso', 'Detén dictado/grabación antes de agregar.', 'warning');
     return;
   }
 
   pendientes.push({ usuario, direccion, audio_path });
-
   savePendientes();
   renderPendientes();
   resetFormServicio();
@@ -648,10 +673,10 @@ $('#btnAgregarServicio').on('click', () => {
   Swal.fire({ icon:'success', title:'Agregado', text:'Servicio agregado a pendientes.', timer:800, showConfirmButton:false });
 });
 
-/* Limpiar solo inputs */
+/* Limpiar */
 $('#btnLimpiar').on('click', () => {
-  if (dir_isRunning) {
-    Swal.fire('Grabación en curso', 'Detén la grabación/transcripción antes de limpiar.', 'warning');
+  if (dir_rec_isRecording || dir_dict_listening) {
+    Swal.fire('Acción en curso', 'Detén dictado/grabación antes de limpiar.', 'warning');
     return;
   }
   $('#inpUsuario, #inpDireccion, #direccionAudioPath').val('');
@@ -660,7 +685,7 @@ $('#btnLimpiar').on('click', () => {
 });
 
 /* =========================================================
-   ASIGNAR: usa pendientes[idxSeleccionado]
+   5) ASIGNAR
    ========================================================= */
 async function asignar(mo_id) {
   if (idxSeleccionado === null || typeof pendientes[idxSeleccionado] === 'undefined') {
@@ -762,7 +787,7 @@ async function asignar(mo_id) {
 }
 
 /* =========================================================
-   Navegación Enter
+   6) Navegación Enter
    ========================================================= */
 $('#inpUsuario').on('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); $('#inpDireccion').focus(); }
