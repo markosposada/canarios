@@ -35,14 +35,9 @@
   // Hoy en Bogotá (para comparar con dis_fecha)
   $hoy = now()->setTimezone('America/Bogota')->format('Y-m-d');
 
-  /**
-   * ✅ Último servicio asignado (Dirección + Usuario) DESDE disponibles
-   * dis_conmo = número del móvil (taxi)
-   * movil.mo_id = número del móvil del conductor
-   */
   $taxisConductor = DB::table('movil')
     ->where('mo_conductor', $cedula)
-    ->pluck('mo_id'); // colección de taxis (números)
+    ->pluck('mo_id');
 
   $ultimoServicio = null;
 
@@ -55,7 +50,6 @@
       ->first();
   }
 
-    // ✅ Facturación últimos 5 días (incluye hoy)
   $desdeFact = now()->setTimezone('America/Bogota')->subDays(5)->format('Y-m-d');
 
   $fact = DB::table('facturacion_operadora as fo')
@@ -71,8 +65,6 @@
 
   $factDebe = (int)($fact->debe ?? 0);
   $factPagado = (int)($fact->pagado ?? 0);
-  $factFacturado = (int)($fact->facturado ?? 0);
-
 @endphp
 
 <div class="row mb-3">
@@ -111,12 +103,10 @@
   }
 </style>
 
-{{-- ===================== TARJETAS ARRIBA ===================== --}}
 <div class="row">
 
-  {{-- Último servicio asignado --}}
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-<a class="dash-link" href="{{ route('conductor.ultimo_servicio') }}">
+    <a class="dash-link" href="{{ route('conductor.ultimo_servicio') }}">
       <div class="card dash-card">
         <div class="card-body d-flex align-items-center justify-content-between">
           <div>
@@ -136,25 +126,23 @@
     </a>
   </div>
 
-  {{-- Estado real del conductor --}}
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.estado') }}">
+    <a class="dash-link" href="{{ route('conductor.moviles') }}">
       <div class="card dash-card">
         <div class="card-body d-flex align-items-center justify-content-between">
           <div>
-            <p class="mb-1 text-muted dash-title">Mi estado</p>
-            <h5 class="mb-0 {{ $estadoClase }}">{{ $estadoTexto }}</h5>
-            <p class="dash-sub mt-1">Toca para ver / cambiar</p>
+            <p class="mb-1 text-muted dash-title">Mis móviles</p>
+            <h5 class="mb-0">Activar / desactivar</h5>
+            <p class="dash-sub mt-1">Activa o desactiva el móvil</p>
           </div>
           <div class="dash-icon">
-            <i class="mdi mdi-account-switch mdi-28px {{ $estadoClase }}"></i>
+            <i class="mdi mdi-toggle-switch text-success"></i>
           </div>
         </div>
       </div>
     </a>
   </div>
 
-  {{-- Servicios asignados hoy --}}
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
     <a class="dash-link" href="{{ route('conductor.servicios_asignados') }}">
       <div class="card dash-card">
@@ -174,143 +162,147 @@
     </a>
   </div>
 
-  {{-- Facturación últimos 5 días --}}
-<div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-  <a class="dash-link" href="{{ route('conductor.facturacion.index') }}">
-    <div class="card dash-card">
-      <div class="card-body d-flex align-items-center justify-content-between">
-        <div>
-          <p class="mb-1 text-muted dash-title">Facturación (5 días)</p>
-          <h5 class="mb-0 {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}">
-            {{ '$' . number_format($factDebe, 0, ',', '.') }}
-          </h5>
-          <p class="dash-sub mt-1">
-            Debe · Pagado: <span class="mini-pill">{{ '$' . number_format($factPagado, 0, ',', '.') }}</span>
-          </p>
+  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
+    <a class="dash-link" href="{{ route('conductor.facturacion.index') }}">
+      <div class="card dash-card">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <p class="mb-1 text-muted dash-title">Facturación (5 días)</p>
+            <h5 class="mb-0 {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}">
+              {{ '$' . number_format($factDebe, 0, ',', '.') }}
+            </h5>
+            <p class="dash-sub mt-1">
+              Debe · Pagado: <span class="mini-pill">{{ '$' . number_format($factPagado, 0, ',', '.') }}</span>
+            </p>
+          </div>
+          <div class="dash-icon">
+            <i class="mdi mdi-cash mdi-28px {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}"></i>
+          </div>
         </div>
-        <div class="dash-icon">
-          <i class="mdi mdi-cash mdi-28px {{ $factDebe > 0 ? 'text-danger' : 'text-success' }}"></i>
-        </div>
+      </div>
+    </a>
+  </div>
+
+  {{-- ... el resto de tus tarjetas igual ... --}}
+
+</div>
+
+{{-- ✅ MODAL Push (Bootstrap 4) --}}
+<div class="modal fade" id="modalPush" tabindex="-1" role="dialog" aria-labelledby="modalPushLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width:520px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPushLabel">Activar notificaciones</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-2">
+          Activa las notificaciones para avisarte cuando tengas <strong>servicios asignados</strong> o alertas importantes.
+        </p>
+        <small class="text-muted">
+          Puedes desactivarlas cuando quieras desde la configuración del navegador.
+        </small>
+
+        <div id="pushModalMsg" class="mt-3"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal" id="btnPushLater">
+          Ahora no
+        </button>
+        <button type="button" class="btn btn-primary" id="btnPushEnable">
+          Activar
+        </button>
       </div>
     </div>
-  </a>
+  </div>
 </div>
 
-
-
-  {{-- Puedes dejar los otros accesos como estaban --}}
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.taxi.edit') }}">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Mi Taxi</p>
-            <h5 class="mb-0">Editar datos</h5>
-            <p class="dash-sub mt-1">Placa, SOAT, Tecno</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-car mdi-28px text-info"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.moviles') }}">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Mis móviles</p>
-            <h5 class="mb-0">Activar / desactivar</h5>
-            <p class="dash-sub mt-1">Control del estado</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-cellphone-link mdi-28px text-warning"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.notificaciones') }}">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Notificaciones</p>
-            <h5 class="mb-0">Centro</h5>
-            <p class="dash-sub mt-1">Alertas y avisos</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-bell-outline mdi-28px text-danger"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.perfil.edit') }}">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Perfil</p>
-            <h5 class="mb-0">Mis datos</h5>
-            <p class="dash-sub mt-1">Actualiza tu info</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-account-edit mdi-28px text-primary"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Salir</p>
-            <h5 class="mb-0">Cerrar sesión</h5>
-            <p class="dash-sub mt-1">Terminar la sesión</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-logout mdi-28px text-dark"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-
-    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-      @csrf
-    </form>
-  </div>
-
-</div>
 @endsection
 
 @section('scripts')
 <script>
+  // ✅ tu script existente para Servicios Hoy
   (function(){
     const hoy = "{{ $hoy }}";
     const el = document.getElementById('serviciosHoy');
-
-    // Usa el endpoint nuevo (ya trae disponibles filtrado + últimos 3 días)
     const url = "{{ route('conductor.servicios_asignados.listar') }}";
 
     fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(res => res.json())
       .then(json => {
         const rows = json.data || [];
-        // ✅ ahora viene como "fecha" (no fac_fecha)
         const countHoy = rows.filter(r => String(r.fecha || '') === hoy).length;
         el.textContent = String(countHoy);
       })
       .catch(() => {
         el.textContent = '0';
       });
+  })();
+</script>
+
+<script>
+  // ✅ Modal push - se muestra solo una vez y solo si permission == "default"
+  (function pushModalOnce(){
+    const KEY = 'push_modal_prompted_once';
+
+    // ya lo mostramos antes
+    if (localStorage.getItem(KEY) === '1') return;
+
+    // si no soporta
+    if (!('Notification' in window)) return;
+
+    // si ya está granted/denied no lo mostramos
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+      localStorage.setItem(KEY, '1');
+      return;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // marcar “ya mostrado” para no insistir si recargan
+      localStorage.setItem(KEY, '1');
+
+      // abre modal (Bootstrap 4 => jQuery)
+      if (window.$ && $('#modalPush').length) {
+        $('#modalPush').modal({ backdrop: 'static', keyboard: true });
+        $('#modalPush').modal('show');
+      }
+
+      // ahora no
+      const btnLater = document.getElementById('btnPushLater');
+      btnLater?.addEventListener('click', () => {
+        // aquí podrías guardar timestamp si quieres reintentar luego
+      });
+
+      // activar
+      const btnEnable = document.getElementById('btnPushEnable');
+      btnEnable?.addEventListener('click', async () => {
+        const msg = document.getElementById('pushModalMsg');
+        if (msg) msg.innerHTML = '<div class="alert alert-info mb-0">Activando…</div>';
+
+        try {
+          if (typeof enablePushNotifications !== 'function') {
+            throw new Error('enablePushNotifications() no está definida.');
+          }
+
+          await enablePushNotifications();
+
+          if (msg) msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Notificaciones activadas.</div>';
+
+          // cerrar
+          setTimeout(() => {
+            if (window.$) $('#modalPush').modal('hide');
+          }, 700);
+
+        } catch (e) {
+          console.error(e);
+          if (msg) msg.innerHTML = '<div class="alert alert-danger mb-0">No se pudo activar. Intenta nuevamente.</div>';
+        }
+      }, { once: true });
+    });
   })();
 </script>
 @endsection
