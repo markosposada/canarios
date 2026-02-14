@@ -131,7 +131,10 @@
       <div class="modal-header flex-column align-items-stretch">
         <div class="w-100 d-flex justify-content-between align-items-center">
             <h5 class="modal-title mb-0">Seleccione el móvil</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+  <span aria-hidden="true">&times;</span>
+</button>
+
         </div>
 
         <div class="alert alert-primary text-center py-2 mb-2 mt-3 fw-bold">
@@ -171,7 +174,6 @@
 {{-- Librerías --}}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 /* ======= Setup y Configuración CSRF ======= */
@@ -513,48 +515,116 @@ initDictadoDireccion();
 /* =========================================================
    3) MÓVILES (modal)
    ========================================================= */
-function cargarMoviles(q = '') { return $.get('{{ route("servicios.moviles") }}', { q }); }
+/* =========================================================
+   3) MÓVILES (modal) - FIX REAL
+   - Usa $.ajax con dataType json
+   - Si el backend devuelve HTML, cae en error y lo vemos
+   ========================================================= */
+
+// ✅ instancia única del modal (Bootstrap 5)
+let modalMovilesInstance = null;
+function getModalMoviles() {
+  const el = document.getElementById('modalMoviles');
+  if (!el) return null;
+  modalMovilesInstance = bootstrap.Modal.getOrCreateInstance(el);
+  return modalMovilesInstance;
+}
+
+function abrirModalMoviles() {
+  $('#modalMoviles').modal('show');
+}
+
+function cerrarModalMoviles() {
+  $('#modalMoviles').modal('hide');
+}
+
+
+// ✅ carga móviles garantizando JSON
+function cargarMoviles(q = '') {
+  return $.ajax({
+    url: '{{ route("servicios.moviles") }}',
+    method: 'GET',
+    data: { q },
+    dataType: 'json', // 🔥 CLAVE: obliga JSON
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  });
+}
 
 function pintarTabla(moviles) {
-    const $tbody = $('#tablaMoviles tbody').empty();
-    if (!moviles.length) {
-        $tbody.append('<tr><td colspan="5" class="text-muted">No hay móviles activos.</td></tr>');
-        return;
-    }
-    moviles.forEach(m => {
-        $tbody.append(`
-            <tr>
-            <td><button class="btn btn-sm btn-success" onclick="asignar(${m.mo_id})">Disponible</button></td>
-                <td>${m.mo_taxi}</td>
-                <td>${m.cantidad}</td>
-                <td>${m.nombre_conductor ?? ''}</td>
-                <td>${m.placa ?? ''}</td>
-                
-                
-            </tr>
-        `);
-    });
+  const $tbody = $('#tablaMoviles tbody').empty();
+
+  if (!Array.isArray(moviles)) {
+    console.error('❌ moviles NO es array:', moviles);
+    $tbody.append('<tr><td colspan="5" class="text-danger">Respuesta inválida del servidor.</td></tr>');
+    return;
+  }
+
+  if (!moviles.length) {
+    $tbody.append('<tr><td colspan="5" class="text-muted">No hay móviles activos.</td></tr>');
+    return;
+  }
+
+  moviles.forEach(m => {
+    $tbody.append(`
+      <tr>
+        <td><button class="btn btn-sm btn-success" onclick="asignar(${m.mo_id})">Disponible</button></td>
+        <td>${m.mo_taxi ?? ''}</td>
+        <td>${m.cantidad ?? 0}</td>
+        <td>${m.nombre_conductor ?? ''}</td>
+        <td>${m.placa ?? ''}</td>
+      </tr>
+    `);
+  });
 }
 
 function debounce(fn, wait = 200) {
-    let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
 }
 
 const filtrarMoviles = debounce(async function () {
-    const q = $('#inpBuscarMovil').val();
-    try {
-        $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-muted">Buscando...</td></tr>');
-        const moviles = await cargarMoviles(q);
-        pintarTabla(moviles);
-    } catch (e) {
-        console.error('Error filtrando móviles:', e);
-        $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-danger">Error al buscar</td></tr>');
+  const q = $('#inpBuscarMovil').val();
+  try {
+    $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-muted">Buscando...</td></tr>');
+    const moviles = await cargarMoviles(q);
+    pintarTabla(moviles);
+  } catch (e) {
+    console.error('❌ Error cargando móviles:', e);
+
+    // 419 muy común por sesión/CSRF expirada
+    if (e?.status === 419) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sesión expirada',
+        text: 'Tu sesión expiró. Se recargará la página.',
+        confirmButtonText: 'Recargar',
+        allowOutsideClick: false
+      }).then(() => location.reload());
+      return;
     }
+
+    // Si el servidor devolvió HTML, jquery marca parsererror
+    let msg = 'No fue posible cargar los móviles.';
+    if (e?.status === 200 && e?.responseText) {
+      msg = 'El servidor devolvió HTML y no JSON (posible login/redirección/error).';
+      console.error('Preview HTML:', String(e.responseText).slice(0, 400));
+    } else if (e?.status) {
+      msg = `Error HTTP ${e.status}. Revisa logs del servidor.`;
+    } else if (e?.statusText) {
+      msg = `Error: ${e.statusText}`;
+    }
+
+    $('#tablaMoviles tbody').html('<tr><td colspan="5" class="text-danger">Error al cargar móviles</td></tr>');
+    Swal.fire('Error', msg, 'error');
+  }
 }, 250);
 
-$('#inpBuscarMovil').on('input', filtrarMoviles);
-$('#inpBuscarMovil').on('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+$('#inpBuscarMovil').off('input').on('input', filtrarMoviles);
+$('#inpBuscarMovil').off('keydown').on('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+
 
 /* =========================================================
    4) PENDIENTES (carrito)
@@ -638,8 +708,8 @@ window.seleccionarPendiente = async function(i) {
     const moviles = await cargarMoviles('');
     pintarTabla(moviles);
 
-    const modal = new bootstrap.Modal(document.getElementById('modalMoviles'));
-    modal.show();
+    abrirModalMoviles();
+
 
     setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
     $('#inpBuscarMovil').val('');
@@ -714,18 +784,14 @@ async function asignar(mo_id) {
     const movil = resp.movil || '---';
     const placa = resp.placa || '---';
 
-    $('#modalMoviles').modal('hide');
 
     pendientes.splice(idxSeleccionado, 1);
     idxSeleccionado = null;
     savePendientes();
     renderPendientes();
 
-    setTimeout(() => {
-      $('.modal').modal('hide');
-      $('.modal-backdrop').remove();
-      $('body').removeClass('modal-open');
-      $('body').css('padding-right', '');
+    cerrarModalMoviles();
+
 
       Swal.fire({
         icon: 'success',
@@ -759,7 +825,7 @@ async function asignar(mo_id) {
         }
       });
 
-    }, 250);
+
 
   } catch (error) {
     console.error('❌ Error completo:', error);
