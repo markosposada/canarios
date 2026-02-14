@@ -19,6 +19,14 @@
 
     body{ background: var(--soft); color: var(--ink); }
 
+    /* ✅ Contenedor centrado tipo app móvil */
+    .app-shell{
+      max-width: 440px;   /* ancho cómodo en móviles */
+      margin: 0 auto;
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
     /* ================= HERO ================= */
     .hero{
       background:
@@ -28,35 +36,40 @@
       border-bottom: 1px solid rgba(0,0,0,.06);
     }
 
-    .brand-wrap{
+    /* ✅ Centrado para móvil */
+    .hero-inner{
+      text-align: center;
       display:flex;
-      align-items:center;
-      gap:20px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
 
-    /* 🔥 LOGO GRANDE Y VISTOSO */
+    /* 🔥 LOGO */
     .brand-logo{
-      width: 110px;
-      height: 110px;
+      width: 92px;
+      height: 92px;
       object-fit: contain;
-      border-radius: 22px;
-      background: rgba(255,255,255,.9);
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
       border: 1px solid rgba(0,0,0,.08);
-      box-shadow: 0 18px 40px rgba(0,0,0,.18);
-      padding: 12px;
-      transition: transform .25s ease;
+      box-shadow: 0 14px 34px rgba(0,0,0,.14);
+      padding: 10px;
     }
-    .brand-logo:hover{ transform: scale(1.05); }
 
     .brand-name{
       font-weight: 900;
-      font-size: 2rem;
+      font-size: 1.55rem;
       letter-spacing: -.02em;
       margin: 0;
-      line-height: 1.05;
+      line-height: 1.1;
     }
 
-    .brand-sub{ margin:0; color: var(--muted); }
+    .brand-sub{
+      margin:0;
+      color: var(--muted);
+      font-size: .95rem;
+    }
 
     .pill{
       display:inline-flex;
@@ -67,35 +80,36 @@
       font-weight: 700;
       border: 1px solid rgba(0,0,0,.08);
       background: rgba(255,255,255,.75);
-      font-size:.85rem;
-    }
-
-    /* ================= CARD ================= */
-    .card-pro{
-      border: 0;
-      border-radius: 20px;
-      box-shadow: 0 14px 34px rgba(0,0,0,.10);
-      overflow: hidden;
-    }
-
-    .card-pro .card-header{
-      background: rgba(255,255,255,.75);
-      backdrop-filter: blur(6px);
-      border-bottom: 1px solid rgba(0,0,0,.06);
+      font-size:.82rem;
     }
 
     .token-chip{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      padding:.5rem 1rem;
+      padding:.55rem 1rem;
       border-radius: 999px;
       background:#111827;
       color:#fff;
       font-weight: 900;
-      letter-spacing:.2rem;
-      font-size: 1rem;
+      letter-spacing:.18rem;
+      font-size: .95rem;
       user-select:none;
+      min-width: 140px;
+    }
+
+    /* ================= CARD ================= */
+    .card-pro{
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 14px 34px rgba(0,0,0,.10);
+      overflow: hidden;
+    }
+
+    .card-pro .card-header{
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
     }
 
     .kv{
@@ -107,14 +121,14 @@
       font-size: .95rem;
     }
     .kv:last-child{ border-bottom:0; }
-    .k{ color: var(--muted); font-weight: 700; }
-    .v{ font-weight: 800; text-align:right; }
+    .k{ color: var(--muted); font-weight: 800; }
+    .v{ font-weight: 900; text-align:right; }
 
     .btn-soft{
       border-radius: 12px;
       border: 1px solid rgba(0,0,0,.10);
       background: #fff;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .skeleton{
@@ -125,58 +139,51 @@
     }
     @keyframes shimmer { 0%{background-position: 200% 0;} 100%{background-position: -200% 0;} }
 
-    /* ================= RESPONSIVE ================= */
+    /* ✅ Ajustes mobile-first */
+    .page-pad{ padding-top: 14px; padding-bottom: 18px; }
+
+    /* ✅ KV en móvil: etiqueta arriba y valor abajo (más legible) */
     @media (max-width: 768px){
-      .brand-wrap{
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .brand-logo{
-        width: 85px;
-        height: 85px;
-        border-radius: 18px;
-        padding: 10px;
-      }
-
-      .brand-name{ font-size: 1.6rem; }
-
-      .token-chip{
-        font-size: .9rem;
-        letter-spacing:.15rem;
-      }
-
       .kv{
         flex-direction: column;
         align-items: flex-start;
+        padding: .7rem 0;
       }
-      .v{ text-align:left; }
+      .v{ text-align:left; width:100%; }
+    }
+
+    /* ✅ Pantallas grandes: vuelve a layout ancho */
+    @media (min-width: 992px){
+      .app-shell{ max-width: 980px; }
+      .hero-inner{
+        text-align: left;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
 
 <body>
 
-  {{-- HERO --}}
-  <section class="hero py-4 py-md-5">
-    <div class="container" style="max-width: 980px;">
-      <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+  {{-- HERO (centrado en móvil) --}}
+  <section class="hero py-4">
+    <div class="app-shell">
+      <div class="hero-inner">
 
-        <div class="brand-wrap">
-          <img src="{{ asset('images/canarios.png') }}" alt="Logo Los Canarios" class="brand-logo">
-          <div>
-            <h1 class="brand-name">Los Canarios</h1>
-            <p class="brand-sub">Estado de tu servicio de taxi</p>
+        <img src="{{ asset('images/canarios.png') }}" alt="Logo Los Canarios" class="brand-logo">
 
-            <div class="mt-2 d-flex flex-wrap gap-2 justify-content-md-start justify-content-center">
-              <span class="pill">🛡️ Seguro</span>
-              <span class="pill">⚡ Rápido</span>
-              <span class="pill">📍 Confiable</span>
-            </div>
+        <div>
+          <h1 class="brand-name">Los Canarios</h1>
+          <p class="brand-sub">Estado de tu servicio de taxi</p>
+
+          <div class="mt-2 d-flex flex-wrap gap-2 justify-content-center">
+            <span class="pill">🛡️ Seguro</span>
+            <span class="pill">⚡ Rápido</span>
+            <span class="pill">📍 Confiable</span>
           </div>
         </div>
 
-        <div class="text-md-end text-center">
+        <div class="mt-2">
           <div class="text-secondary small mb-1">Código de seguimiento</div>
           <div id="tokenChip" class="token-chip">—</div>
           <div class="text-muted mt-2 small" id="estadoLabel">Preparando consulta…</div>
@@ -186,49 +193,45 @@
     </div>
   </section>
 
-  {{-- CONTENT --}}
-  <main class="container py-4 py-md-5" style="max-width: 980px;">
-    <div class="row g-4">
+  {{-- CONTENT (1 columna centrada en móvil) --}}
+  <main class="app-shell page-pad">
+    <div class="d-grid gap-3">
 
-      <div class="col-lg-7">
-        <div class="card card-pro">
-          <div class="card-header py-3 px-4 d-flex justify-content-between">
-            <div class="fw-bold">Detalles de tu servicio</div>
-            <div class="small text-muted">Actualizado automáticamente</div>
+      <div class="card card-pro">
+        <div class="card-header py-3 px-3 d-flex justify-content-between align-items-center">
+          <div class="fw-bold">Detalles de tu servicio</div>
+          <div class="small text-muted">Auto</div>
+        </div>
+
+        <div class="card-body p-3">
+          <div id="resultado">
+            {{-- Skeleton inicial --}}
+            <div class="mb-3 skeleton" style="height: 18px; width: 55%;"></div>
+            <div class="skeleton mb-2" style="height: 14px; width: 92%;"></div>
+            <div class="skeleton mb-2" style="height: 14px; width: 86%;"></div>
+            <div class="skeleton mb-2" style="height: 14px; width: 88%;"></div>
+            <div class="skeleton mb-2" style="height: 14px; width: 80%;"></div>
+            <div class="skeleton" style="height: 14px; width: 68%;"></div>
           </div>
 
-          <div class="card-body p-4">
-            <div id="resultado">
-              {{-- Skeleton inicial --}}
-              <div class="mb-3 skeleton" style="height: 18px; width: 55%;"></div>
-              <div class="skeleton mb-2" style="height: 14px; width: 92%;"></div>
-              <div class="skeleton mb-2" style="height: 14px; width: 86%;"></div>
-              <div class="skeleton mb-2" style="height: 14px; width: 88%;"></div>
-              <div class="skeleton mb-2" style="height: 14px; width: 80%;"></div>
-              <div class="skeleton" style="height: 14px; width: 68%;"></div>
-            </div>
-
-            <div class="d-flex flex-wrap gap-2 mt-4 justify-content-center justify-content-md-start">
-              <button class="btn btn-soft px-3" id="btnReintentar" type="button" style="display:none;">
-                Reintentar
-              </button>
-              <button class="btn btn-dark px-3" type="button" onclick="window.location.reload()">
-                Actualizar
-              </button>
-            </div>
+          <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+            <button class="btn btn-soft px-3" id="btnReintentar" type="button" style="display:none;">
+              Reintentar
+            </button>
+            <button class="btn btn-dark px-3" type="button" onclick="window.location.reload()">
+              Actualizar
+            </button>
           </div>
         </div>
       </div>
 
-      {{-- (Opcional) columna derecha, si la quieres --}}
-      <div class="col-lg-5">
-        <div class="card card-pro">
-          <div class="card-header py-3 px-4">
-            <div class="fw-bold">Atención</div>
-          </div>
-          <div class="card-body p-4 text-secondary">
-           Si el servicio es fuera del perimetro urbano, la tarifa es de comun acuerdo con el conductor.
-          </div>
+      {{-- Nota / atención --}}
+      <div class="card card-pro">
+        <div class="card-header py-3 px-3">
+          <div class="fw-bold">Atención</div>
+        </div>
+        <div class="card-body p-3 text-secondary">
+          Si el servicio es fuera del perímetro urbano, la tarifa es de común acuerdo con el conductor.
         </div>
       </div>
 
@@ -329,7 +332,6 @@
 
       document.getElementById('tokenChip').textContent = tokenUrl || '—';
 
-      // ✅ Validación correcta: 1 letra + 2 números
       if (!/^[A-Z]\d{2}$/.test(tokenUrl)) {
         setEstado('Código inválido');
         showRetry(false);
@@ -337,8 +339,6 @@
       }
 
       document.getElementById('btnReintentar').addEventListener('click', () => consultar(tokenUrl));
-
-      // ✅ Consulta automática
       consultar(tokenUrl);
     });
   </script>
