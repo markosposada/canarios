@@ -13,30 +13,26 @@ class UltimoServicioController extends Controller
     {
         $cedula = Auth::user()->cedula;
 
-        // ✅ dis_conmo guarda mo_id, NO mo_taxi
-$moIds = DB::table('movil')
-    ->where('mo_conductor', $cedula)
-    ->where('mo_estado', 1)
-    ->pluck('mo_id');
+        // ✅ Traer el último servicio y además el mo_taxi (placa) desde movil
+        $servicio = DB::table('disponibles as d')
+            ->join('movil as m', 'm.mo_id', '=', 'd.dis_conmo')
+            ->select('d.*', 'm.mo_taxi') // ✅ ahora la vista podrá usar $servicio->mo_taxi
+            ->where('m.mo_conductor', $cedula)
+            ->where('m.mo_estado', 1)
+            ->orderByDesc('d.dis_fecha')
+            ->orderByDesc('d.dis_hora')
+            ->first();
 
-        if ($moIds->isEmpty()) {
+        if (!$servicio) {
             return view('conductor.ultimo_servicio', [
                 'servicio' => null,
                 'hace' => null,
             ]);
         }
 
-        // ✅ Buscar el último servicio por esos mo_id
-        $servicio = DB::table('disponibles')
-            ->whereIn('dis_conmo', $moIds)
-            ->orderByDesc('dis_fecha')
-            ->orderByDesc('dis_hora')
-            ->first();
-
         $hace = null;
 
-        if ($servicio && !empty($servicio->dis_fecha) && !empty($servicio->dis_hora)) {
-            // ✅ dis_hora puede venir H:i o H:i:s
+        if (!empty($servicio->dis_fecha) && !empty($servicio->dis_hora)) {
             $format = strlen($servicio->dis_hora) === 5 ? 'Y-m-d H:i' : 'Y-m-d H:i:s';
 
             $fechaHora = Carbon::createFromFormat(
@@ -45,7 +41,6 @@ $moIds = DB::table('movil')
                 'America/Bogota'
             );
 
-            // ✅ "hace X..." (sin decimales raros)
             $hace = $fechaHora->diffForHumans(now('America/Bogota'), [
                 'parts' => 2,
                 'short' => false,
@@ -55,3 +50,4 @@ $moIds = DB::table('movil')
         return view('conductor.ultimo_servicio', compact('servicio', 'hace'));
     }
 }
+

@@ -28,7 +28,7 @@ class ServiciosAsignadosController extends Controller
         ->join('movil as m', 'm.mo_id', '=', 'd.dis_conmo')
         ->select([
             'd.dis_id',
-            'd.dis_conmo as movil',
+            'm.mo_taxi as movil', // ✅ CAMBIO AQUÍ
             'd.dis_dire as direccion',
             'd.dis_fecha as fecha',
             'd.dis_hora as hora',
@@ -47,5 +47,6 @@ class ServiciosAsignadosController extends Controller
         'total' => $rows->count(),
     ]);
 }
+
 
 }

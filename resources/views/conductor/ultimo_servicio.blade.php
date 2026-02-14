@@ -60,7 +60,7 @@
                 @endif
 
                 <p><strong>ID Servicio:</strong> {{ $servicio->dis_id }}</p>
-                <p><strong>Móvil:</strong> {{ $servicio->dis_conmo }}</p>
+                <p><strong>Móvil:</strong> {{ $servicio->mo_taxi }}</p>
                 <p><strong>Dirección:</strong> {{ $servicio->dis_dire }}</p>
                 <p><strong>Fecha:</strong> {{ $servicio->dis_fecha }}</p>
                 <p><strong>Hora:</strong> {{ $servicio->dis_hora }}</p>
