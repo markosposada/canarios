@@ -5,6 +5,62 @@
 {{-- ✅ OJO: me dijiste que el CSS lo pondrás en el layout.
      Aquí NO lo incluyo para que quede limpio. --}}
 
+<style>
+  /* Cards de pendientes (móvil) */
+  .pend-card{
+    border:1px solid #e9ecef;
+    border-radius:14px;
+    padding:12px;
+    background:#fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    margin-bottom:10px;
+  }
+  .pend-top{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .pend-num{
+    font-weight:800;
+    font-size:14px;
+    background:#f1f3f5;
+    border-radius:10px;
+    padding:4px 8px;
+    min-width:34px;
+    text-align:center;
+  }
+  .pend-user{
+    font-weight:700;
+    font-size:14px;
+    line-height:1.2;
+  }
+  .pend-dir{
+    font-size:13px;
+    color:#495057;
+    margin-top:4px;
+    line-height:1.25;
+    word-break: break-word;
+  }
+  .pend-meta{
+    margin-top:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .pend-actions{
+    display:flex;
+    gap:8px;
+  }
+  .pend-actions .btn{
+    padding:8px 10px;
+    font-size:13px;
+  }
+</style>
+
+
+
 <div class="container page-wrap">
     <h2 class="text-center page-title">ASIGNA SERVICIOS</h2>
 
@@ -81,46 +137,53 @@
 
 {{-- Lista de pendientes --}}
 <div class="container pb-3">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-8 px-0 px-md-2">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8 px-0 px-md-2">
 
-            <div class="card mt-3">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0">Servicios pendientes</h5>
-                        <span class="badge bg-secondary" id="badgePendientes">0</span>
-                    </div>
+      <div class="card mt-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <h5 class="mb-0">Servicios pendientes</h5>
+            <span class="badge bg-secondary" id="badgePendientes">0</span>
+          </div>
 
-                    <div class="table-responsive mt-2">
-                        <table class="table table-sm align-middle" id="tablaPendientes">
-                            <thead>
-                                <tr>
-                                    <th style="width:50px">#</th>
-                                    <th>Usuario</th>
-                                    <th>Dirección</th>
-                                    <th style="width:70px" class="text-center">Audio</th>
-                                    <th style="width:150px" class="text-end">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="5" class="text-muted text-center">
-                                        No hay servicios pendientes.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+          {{-- ✅ MÓVIL: Cards --}}
+          <div id="pendientesCards" class="d-block d-md-none mt-3">
+            <div class="text-muted text-center py-3">No hay servicios pendientes.</div>
+          </div>
 
-                    <small class="text-muted d-block mt-2">
-                        Tip: agrega varios servicios y luego asigna uno por uno.
-                    </small>
-                </div>
-            </div>
+          {{-- ✅ TABLET/DESKTOP: Tabla --}}
+          <div class="table-responsive mt-2 d-none d-md-block">
+            <table class="table table-sm align-middle" id="tablaPendientes">
+              <thead>
+                <tr>
+                  <th style="width:50px">#</th>
+                  <th>Usuario</th>
+                  <th>Dirección</th>
+                  <th style="width:70px" class="text-center">Audio</th>
+                  <th style="width:150px" class="text-end">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colspan="5" class="text-muted text-center">
+                    No hay servicios pendientes.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
+          <small class="text-muted d-block mt-2">
+            Tip: agrega varios servicios y luego asigna uno por uno.
+          </small>
         </div>
+      </div>
+
     </div>
+  </div>
 </div>
+
 
 {{-- Modal: Lista de móviles activos --}}
 <div class="modal fade" id="modalMoviles" tabindex="-1" aria-hidden="true">
@@ -144,7 +207,7 @@
         <input type="text"
                id="inpBuscarMovil"
                class="form-control"
-               placeholder="Buscar por móvil, conductor o placa...">
+               placeholder="Buscar por móvil">
       </div>
 
       <div class="modal-body">
@@ -661,32 +724,68 @@ function resetFormServicio() {
 }
 
 function renderPendientes() {
-  const $tbody = $('#tablaPendientes tbody').empty();
+  // badge
   $('#badgePendientes').text(pendientes.length);
+
+  // ====== (A) TABLET/DESKTOP: tabla ======
+  const $tbody = $('#tablaPendientes tbody').empty();
 
   if (!pendientes.length) {
     $tbody.append(`<tr><td colspan="5" class="text-muted text-center">No hay servicios pendientes.</td></tr>`);
+  } else {
+    pendientes.forEach((p, i) => {
+      const audioTxt = p.audio_path ? '✅' : '—';
+      $tbody.append(`
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(p.usuario)}</td>
+          <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${escapeHtml(p.direccion)}
+          </td>
+          <td class="text-center">${audioTxt}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-success me-2" onclick="seleccionarPendiente(${i})">Asignar</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="quitarPendiente(${i})">Quitar</button>
+          </td>
+        </tr>
+      `);
+    });
+  }
+
+  // ====== (B) MÓVIL: cards ======
+  const $cards = $('#pendientesCards').empty();
+
+  if (!pendientes.length) {
+    $cards.html(`<div class="text-muted text-center py-3">No hay servicios pendientes.</div>`);
     return;
   }
 
   pendientes.forEach((p, i) => {
-    const audioTxt = p.audio_path ? '✅' : '—';
-    $tbody.append(`
-      <tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(p.usuario)}</td>
-        <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${escapeHtml(p.direccion)}
-        </td>
-        <td class="text-center">${audioTxt}</td>
-        <td class="text-end">
-          <button class="btn btn-sm btn-success me-2" onclick="seleccionarPendiente(${i})">Asignar</button>
-          <button class="btn btn-sm btn-outline-danger" onclick="quitarPendiente(${i})">Quitar</button>
-        </td>
-      </tr>
+    const audioTxt = p.audio_path ? '✅ Audio' : '— Sin audio';
+
+    $cards.append(`
+      <div class="pend-card">
+        <div class="pend-top">
+          <div class="pend-num">${i + 1}</div>
+          <div class="flex-grow-1">
+            <div class="pend-user">${escapeHtml(p.usuario)}</div>
+            <div class="pend-dir">${escapeHtml(p.direccion)}</div>
+          </div>
+        </div>
+
+        <div class="pend-meta">
+          <span class="badge bg-light text-dark" style="border:1px solid #e9ecef">${audioTxt}</span>
+
+          <div class="pend-actions">
+            <button class="btn btn-success btn-sm" onclick="seleccionarPendiente(${i})">Asignar</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="quitarPendiente(${i})">Quitar</button>
+          </div>
+        </div>
+      </div>
     `);
   });
 }
+
 
 function quitarPendiente(i) { pendientes.splice(i, 1); savePendientes(); renderPendientes(); }
 

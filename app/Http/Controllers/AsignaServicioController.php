@@ -45,13 +45,9 @@ public function movilesActivos(Request $request)
         ->where('conductores.conduc_estado', 1)
 
         ->when($q !== '', function($sql) use ($q) {
-            $like = "%{$q}%";
-            $sql->where(function($w) use ($like) {
-                $w->whereRaw('CAST(movil.mo_taxi AS CHAR) LIKE ?', [$like])
-                  ->orWhere('conductores.conduc_nombres', 'like', $like)
-                  ->orWhere('taxi.ta_placa', 'like', $like);
-            });
-        })
+    $sql->where('movil.mo_taxi', (int) $q);
+})
+
         ->groupBy(
             'movil.mo_id',
             'movil.mo_taxi',
