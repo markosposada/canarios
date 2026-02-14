@@ -41,8 +41,8 @@
                      placeholder="Ej: 17 / ABC123 / Juan / 123456"
                      autocomplete="off">
               <button class="btn btn-outline-secondary" type="button" id="btnLimpiarBusc">Limpiar</button>
-            </div>
-            <div class="muted-sm mt-1">Busca entre móviles activos (mo_estado=1). Escribe 2+ caracteres.</div>
+            </div> 
+            <div class="muted-sm mt-1">Busca móviles activos </div>
           </div>
 
           {{-- SELECCIONADO --}}
@@ -251,15 +251,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   qMovil.addEventListener('input', function(){
-    clearTimeout(debounceT);
-    const q = qMovil.value.trim();
-    if (q.length < 2) {
-      txtEstado.textContent = '';
-      lista.innerHTML = `<div class="text-muted text-center py-3">Escribe al menos 2 caracteres…</div>`;
-      return;
-    }
-    debounceT = setTimeout(() => cargarMoviles(q), 250);
-  });
+  clearTimeout(debounceT);
+  const q = qMovil.value.trim();
+  debounceT = setTimeout(() => cargarMoviles(q), 250);
+});
+
 
   btnSancionar.addEventListener('click', async function(){
     const tpsa_id = selTipo.value;

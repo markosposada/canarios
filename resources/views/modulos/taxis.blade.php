@@ -55,7 +55,7 @@
                 <button type="submit" class="btn btn-primary">GUARDAR</button>
             </div>
 
-            <a href="/" class="btn btn-secondary mt-3">VOLVER</a>
+
         </form>
     </div>
 </div>

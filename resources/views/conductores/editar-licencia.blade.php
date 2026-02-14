@@ -39,9 +39,7 @@
         </form>
     </div>
 </div>
-<a href="{{ url()->previous() }}" class="btn btn-secondary mb-3">
-    ← Atrás
-</a>
+
 
 @endsection
 

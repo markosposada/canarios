@@ -42,9 +42,10 @@ class SancionesController extends Controller
         ]);
 
     // ✅ SOLO por número de móvil
-    if ($q !== '') {
-        $sql->whereRaw('CAST(m.mo_taxi AS CHAR) LIKE ?', ["%{$q}%"]);
-    }
+    if ($q !== '' && is_numeric($q)) {
+    $sql->where('m.mo_taxi', $q);
+}
+
 
     return response()->json(
         $sql->orderBy('m.mo_taxi')->limit(200)->get()
