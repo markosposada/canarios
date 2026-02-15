@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Iniciar Sesión</title>
@@ -154,7 +156,7 @@
     </div>
   </div>
 
-  @if(session('login_error'))
+    @if(session('login_error'))
   <script>
     Swal.fire({
       icon: 'error',
@@ -163,17 +165,19 @@
       confirmButtonColor: '#d33',
       confirmButtonText: 'Entendido',
     });
-
-
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js");
-    });
-  }
-
-
-
   </script>
   @endif
+
+  {{-- ✅ SIEMPRE registrar el service worker --}}
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js")
+          .then(() => console.log("SW OK"))
+          .catch(err => console.log("SW ERROR", err));
+      });
+    }
+  </script>
 </body>
 </html>
+
