@@ -14,6 +14,10 @@
   <!-- Tu CSS (si lo usas) -->
   <link href="{{ asset('css/style.css') }}" rel="stylesheet">
 
+    <link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0d6efd">
+
+
   <style>
     /* Fondo suave */
     body {
@@ -159,6 +163,16 @@
       confirmButtonColor: '#d33',
       confirmButtonText: 'Entendido',
     });
+
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js");
+    });
+  }
+
+
+
   </script>
   @endif
 </body>
