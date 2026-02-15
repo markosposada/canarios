@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="register-form">
-    <h2 class="mb-4 text-center">Registro de Usuarios de taxstas</h2>
+    <h2 class="mb-4 text-center">Registro de Usuarios</h2>
 
     <form method="POST" action="{{ route('register') }}">
         @csrf
@@ -58,10 +58,10 @@
         <div class="mb-3">
             <label for="rol" class="form-label">Rol</label>
             <select name="rol" class="form-select" required>
-                <option value="" disabled selected>Seleccione un rol</option>
-                <option value="administrador">Administrador</option>
-                <option value="operadora">Operadora</option>
-                <option value="conductor">Conductor</option>
+                <option value="" disabled {{ old('rol') ? '' : 'selected' }}>Seleccione un rol</option>
+                <option value="administrador" {{ old('rol') === 'administrador' ? 'selected' : '' }}>Administrador</option>
+                <option value="operadora" {{ old('rol') === 'operadora' ? 'selected' : '' }}>Operadora</option>
+                <option value="conductor" {{ old('rol') === 'conductor' ? 'selected' : '' }}>Conductor</option>
             </select>
             @error('rol')
                 <small class="text-danger">{{ $message }}</small>
@@ -87,29 +87,44 @@
     </form>
 </div>
 
-{{-- Popups con SweetAlert2 --}}
+{{-- SweetAlert2 --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{{-- Modal éxito: se cierra automático y resetea formulario --}}
 @if(session('success'))
 <script>
+document.addEventListener('DOMContentLoaded', function () {
     Swal.fire({
         icon: 'success',
         title: '¡Registro exitoso!',
-        text: '{{ session('success') }}',
-        confirmButtonText: 'Agregar otro usuario',
-        confirmButtonColor: '#3085d6'
+        text: @json(session('success')),
+        timer: 1600,              // ⏱️ se cierra solo
+        timerProgressBar: true,
+        showConfirmButton: false, // ✅ sin botón
+        allowOutsideClick: false,
+        allowEscapeKey: false
     }).then(() => {
-        document.querySelector("form").reset();
-        document.querySelector("input[name='nombres']").focus();
+        const form = document.querySelector("form");
+        if (form) form.reset();
+
+        const inputNombres = document.querySelector("input[name='nombres']");
+        if (inputNombres) inputNombres.focus();
     });
+});
 </script>
 @endif
 
+{{-- Modal error --}}
 @if(session('error'))
 <script>
+document.addEventListener('DOMContentLoaded', function () {
     Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: '{{ session('error') }}'
+        text: @json(session('error')),
+        confirmButtonText: 'Cerrar'
     });
+});
 </script>
 @endif
 @endsection

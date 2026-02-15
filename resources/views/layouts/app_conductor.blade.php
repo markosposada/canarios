@@ -5,6 +5,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+<meta name="theme-color" content="#0d6efd">
+<link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+
     
 
     <title>@yield('title', 'Los Canarios')</title>
@@ -238,15 +243,15 @@
                                 <a class="dropdown-item" href="#">
                                     <i class="mdi mdi-cached mr-2 text-success"></i> Cambiar Contraseña
                                 </a>
-                                <a class="dropdown-item"
-   href="{{ route('logout') }}"
-   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-    <i class="mdi mdi-logout mr-2 text-primary"></i> Cerrar Sesion
-</a>
-
-<form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                                <div class="dropdown-menu navbar-dropdown w-100" aria-labelledby="profileDropdown">
+  <form method="POST" action="{{ route('logout') }}">
     @csrf
-</form>
+    <button type="submit" class="dropdown-item">
+      <i class="mdi mdi-logout mr-2 text-primary"></i> Cerrar Sesión
+    </button>
+  </form>
+</div>
+
 
                             </div>
                         </li>
@@ -329,8 +334,17 @@ function urlBase64ToUint8Array(base64String) {
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register("{{ asset('sw.js') }}");
+    });
+  }
+
 </script>
 
     @yield('scripts')
+
+    
 </body>
 </html>

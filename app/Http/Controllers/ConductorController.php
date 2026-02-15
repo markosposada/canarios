@@ -16,26 +16,104 @@ class ConductorController extends Controller
         return view('conductores.editar-licencia');
     }
 
-    // Buscar conductor por cédula (AJAX)
-    public function buscarPorCedulaParaEditar(Request $request)
-    {
-        $cedula = (int) $request->input('cedula');
-        \Log::info('Buscando conductor con cédula: ' . $cedula);
+// Buscar conductor por cédula o nombres (AJAX)
+public function buscarPorCedulaParaEditar(Request $request)
+{
+    // Soporta {q} (nuevo) o {cedula} (viejo) por compatibilidad
+    $q = trim((string) ($request->input('q', $request->input('cedula', ''))));
 
-        $conductor = Conductor::where('conduc_cc', $cedula)->first();
+    if ($q === '') {
+        return response()->json(['encontrado' => false, 'error' => 'Consulta vacía']);
+    }
 
-        if (!$conductor) {
-            \Log::warning('Conductor no encontrado para cédula: ' . $cedula);
-            return response()->json(['encontrado' => false]);
+    $conductorQuery = Conductor::query();
+
+    // Si es numérico => buscar por cédula exacta
+    if (preg_match('/^\d+$/', $q)) {
+        $conductorQuery->where('conduc_cc', (int)$q);
+    } else {
+        // Si es texto => buscar por nombres (LIKE)
+        // Recomendación: mínimo 2 letras
+        if (mb_strlen($q) < 2) {
+            return response()->json(['encontrado' => false, 'error' => 'Escribe al menos 2 letras']);
         }
 
-        return response()->json([
-            'encontrado' => true,
-            'nombres' => $conductor->conduc_nombres,
-            'licencia' => $conductor->conduc_licencia,
-            'fecha' => $conductor->conduc_fecha
-        ]);
+        $like = '%' . $q . '%';
+        $conductorQuery->where('conduc_nombres', 'like', $like)
+                      ->orderBy('conduc_nombres');
     }
+
+    // Si buscas por nombre puede haber varios; aquí tomamos el primero
+    $conductor = $conductorQuery->first();
+
+    if (!$conductor) {
+        return response()->json(['encontrado' => false, 'error' => 'Conductor no encontrado']);
+    }
+
+    return response()->json([
+        'encontrado' => true,
+        'cedula' => $conductor->conduc_cc,
+        'nombres' => $conductor->conduc_nombres,
+        'licencia' => $conductor->conduc_licencia,
+        'fecha' => $conductor->conduc_fecha,
+    ]);
+}
+
+// LISTA para el modal (GET /conductores/licencia/buscar?q=)
+public function buscarConductoresParaLicencia(Request $request)
+{
+    $q = trim($request->query('q', ''));
+
+    if ($q === '' || mb_strlen($q) < 2) {
+        return response()->json(['ok' => true, 'data' => []]);
+    }
+
+    $like = "%{$q}%";
+
+    $rows = DB::table('conductores as c')
+        ->where(function($w) use ($like){
+            $w->where('c.conduc_nombres', 'like', $like)
+              ->orWhereRaw('CAST(c.conduc_cc AS CHAR) LIKE ?', [$like]);
+        })
+        ->orderBy('c.conduc_nombres')
+        ->limit(30)
+        ->select([
+            'c.conduc_cc as cedula',
+            'c.conduc_nombres as nombre',
+            'c.conduc_estado as estado',
+        ])
+        ->get();
+
+    return response()->json(['ok' => true, 'data' => $rows]);
+}
+
+// DETALLE para llenar formulario (POST /conductores/licencia/detalle)
+public function detalleConductorParaLicencia(Request $request)
+{
+    $cedula = trim((string)$request->input('cedula', ''));
+
+    if ($cedula === '') {
+        return response()->json(['encontrado' => false]);
+    }
+
+    $c = DB::table('conductores')
+        ->where('conduc_cc', $cedula)
+        ->select('conduc_cc','conduc_nombres','conduc_licencia','conduc_fecha')
+        ->first();
+
+    if (!$c) {
+        return response()->json(['encontrado' => false]);
+    }
+
+    return response()->json([
+        'encontrado' => true,
+        'cedula' => $c->conduc_cc,
+        'nombres' => $c->conduc_nombres,
+        'licencia' => $c->conduc_licencia,
+        'fecha' => $c->conduc_fecha,
+    ]);
+}
+
 
     // Guardar cambios
     public function actualizarLicencia(Request $request)

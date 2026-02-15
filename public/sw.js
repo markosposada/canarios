@@ -18,3 +18,12 @@ self.addEventListener('notificationclick', (event) => {
   const url = (event.notification.data && event.notification.data.url) || '/conductor/servicios-asignados';
   event.waitUntil(clients.openWindow(url));
 });
+
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  clients.claim();
+});
+

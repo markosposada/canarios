@@ -275,6 +275,12 @@ Route::post('/buscar-datos-conductor', [App\Http\Controllers\ConductorController
     Route::get('/operadora/estado-conductor/buscar', [EstadoConductorControllerOperadora::class, 'buscar'])->name('operadora.estado_conductor.buscar');
     Route::post('/operadora/estado-conductor/actualizar', [EstadoConductorControllerOperadora::class, 'actualizar'])->name('operadora.estado_conductor.actualizar');
 
+    Route::get('/conductores/licencia/buscar', [ConductorController::class, 'buscarConductoresParaLicencia'])
+  ->name('conductores.licencia.buscar');
+
+Route::post('/conductores/licencia/detalle', [ConductorController::class, 'detalleConductorParaLicencia'])
+  ->name('conductores.licencia.detalle');
+
 //fin operadora
 
     Route::get('/conductor/servicios', [ConductorServiciosController::class, 'vista'])

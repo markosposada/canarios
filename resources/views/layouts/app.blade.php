@@ -228,16 +228,15 @@
                                 <span class="profile-name">{{ \Illuminate\Support\Facades\Auth::user()->name }}</span>
                             @endauth
                         </a>
-                        <div class="dropdown-menu navbar-dropdown w-100" aria-labelledby="profileDropdown">
-                            <a class="dropdown-item"
-                               href="{{ route('logout') }}"
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="mdi mdi-logout mr-2 text-primary"></i> Cerrar Sesion
-                            </a>
-                            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                                @csrf
-                            </form>
-                        </div>
+<div class="dropdown-menu navbar-dropdown w-100" aria-labelledby="profileDropdown">
+  <form method="POST" action="{{ route('logout') }}">
+    @csrf
+    <button type="submit" class="dropdown-item">
+      <i class="mdi mdi-logout mr-2 text-primary"></i> Cerrar Sesión
+    </button>
+  </form>
+</div>
+
                     </li>
                 </ul>
 
