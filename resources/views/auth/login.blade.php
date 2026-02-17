@@ -107,45 +107,59 @@
             <p class="text-muted mb-0" style="font-size: .95rem;">Accede con tu correo y contraseña</p>
           </div>
 
-          <form method="POST" action="{{ route('login') }}">
-            @csrf
 
-            <div class="mb-3">
-              <label for="email" class="form-label fw-semibold">Correo electrónico</label>
-              <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                placeholder="Ej: correo@dominio.com"
-                required
-                autofocus
-                autocomplete="email"
-              >
-            </div>
+          <form method="POST" action="{{ route('login.post') }}">
+  @csrf
 
-            <div class="mb-3">
-              <label for="password" class="form-label fw-semibold">Contraseña</label>
-              <input
-                type="password"
-                class="form-control"
-                id="password"
-                name="password"
-                placeholder="••••••••"
-                required
-                autocomplete="current-password"
-              >
-            </div>
 
-            <button type="submit" class="btn btn-primary w-100 btn-auth">
-              Entrar
-            </button>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 auth-links" style="font-size: .95rem;">
-              <a href="{{ route('password.request') }}">¿Olvidó su contraseña?</a>
-              <a href="{{ route('taxistas.create') }}">Registrarse</a>
-            </div>
-          </form>
+  <div class="mb-3">
+    <label for="cedula" class="form-label fw-semibold">Cédula</label>
+    <input
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      class="form-control"
+      id="cedula"
+      name="cedula"
+      placeholder="Ej: 1234567890"
+      required
+      autofocus
+      autocomplete="username"
+      value="{{ old('cedula') }}"
+    >
+  </div>
+
+  <div class="mb-3">
+    <label for="password" class="form-label fw-semibold">Contraseña</label>
+    <input
+      type="password"
+      class="form-control"
+      id="password"
+      name="password"
+      placeholder="••••••••"
+      required
+      autocomplete="current-password"
+    >
+  </div>
+
+  <div class="form-check mb-3">
+<input class="form-check-input" type="checkbox" name="remember" id="remember" value="1" checked>
+    <label class="form-check-label" for="remember">
+      Recordarme
+    </label>
+  </div>
+
+  <button type="submit" class="btn btn-primary w-100 btn-auth">
+    Entrar
+  </button>
+
+  <div class="d-flex justify-content-between align-items-center mt-3 auth-links" style="font-size: .95rem;">
+    <a href="{{ route('password.request') }}">¿Olvidó su contraseña?</a>
+    <a href="{{ route('taxistas.create') }}">Registrarse</a>
+  </div>
+</form>
+
         </div>
       </div>
 

@@ -3,27 +3,35 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class RolMiddleware
 {
-    public function handle($request, Closure $next, ...$roles)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
         if (!Auth::check()) {
             return redirect('/login');
         }
 
-        $user = Auth::user();
+        $userRol = strtolower(trim(Auth::user()->rol));
+        $rolesPermitidos = array_map(fn($r) => strtolower(trim($r)), $roles);
 
-        // Admin entra a todo
-        if ($user->rol === 'administrador') {
+        // Administrador entra a todo
+        if ($userRol === 'administrador') {
             return $next($request);
         }
 
-        if (in_array($user->rol, $roles)) {
+        if (in_array($userRol, $rolesPermitidos)) {
             return $next($request);
         }
 
-        abort(403, 'No tienes permiso para acceder a esta página.');
+        // Redirección automática según rol
+        return match ($userRol) {
+            'operadora' => redirect('/dashboard'),
+            'conductor' => redirect('/modulo-conductor'),
+            'propietario taxi' => redirect('/modulo-propietario'),
+            default => redirect('/login'),
+        };
     }
 }
