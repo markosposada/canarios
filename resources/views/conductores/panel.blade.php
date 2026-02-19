@@ -39,7 +39,10 @@
       <div class="row g-2 align-items-end">
         <div class="col-12 col-md-9">
           <label class="form-label mb-1">Buscar por móvil</label>
-          <input type="text" id="movil" class="form-control" placeholder="Ej: 10">
+          <input type="text" id="movil" class="form-control" placeholder="Ej: 10"
+       inputmode="numeric"
+       pattern="[0-9]*"
+       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </div>
         <div class="col-12 col-md-3">
           <button id="btnBuscar" class="btn btn-dark w-100">Buscar</button>

@@ -15577,4 +15577,69 @@ min-height: calc(100vh - 70px);
   -ms-flex-positive: 1;
   flex-grow: 1; }
 
+  /* ===== NAVBAR (quita el negro y mejora contraste) ===== */
+.navbar .navbar-menu-wrapper{
+  background: linear-gradient(90deg, #0b3d2e, #0f5a3d); /* ✅ verde elegante */
+}
+
+.navbar .navbar-menu-wrapper .navbar-nav .nav-link,
+.navbar .navbar-menu-wrapper .navbar-toggler{
+  color:#fff !important;
+}
+
+.navbar .navbar-menu-wrapper .navbar-nav .nav-profile .profile-name{
+  color:#fff !important;
+  font-weight:700;
+}
+
+/* Dropdown del perfil */
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item.nav-profile .navbar-dropdown{
+  border-radius: 14px;
+  padding: .5rem;
+  border: 1px solid rgba(0,0,0,.08);
+  box-shadow: 0 10px 25px rgba(0,0,0,.12);
+}
+
+/* ✅ Logout como botón rojo */
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item.nav-profile .navbar-dropdown .dropdown-item{
+  border-radius: 10px;
+  padding: .65rem .9rem;
+}
+
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item.nav-profile .navbar-dropdown .dropdown-item:hover{
+  background: rgba(220,53,69,.10);
+}
+
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item.nav-profile .navbar-dropdown button.dropdown-item{
+  color:#dc3545 !important;
+  font-weight: 700;
+}
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item.nav-profile .navbar-dropdown button.dropdown-item i{
+  color:#dc3545 !important;
+}
+
+.sidebar .nav .nav-item.sidebar-actions ul li{
+  list-style:none;
+  color:#ffffff;              /* ✅ visible */
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ✅ que el link se vea como botón */
+.sidebar .nav .nav-item.sidebar-actions a.dropdown-item{
+  color:#ffffff !important;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+  padding: .6rem .9rem;
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+}
+
+.sidebar .nav .nav-item.sidebar-actions a.dropdown-item:hover{
+  background: rgba(255,255,255,.18);
+}
+
+
 /*# sourceMappingURL=style.css.map */

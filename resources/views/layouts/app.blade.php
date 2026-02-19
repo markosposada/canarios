@@ -63,11 +63,6 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url('/servicios/consulta') }}">
-                                <i class="mdi mdi-cloud-search-outline mr-1"></i> Consulta por Token
-                            </a>
-                        </li>
-                        <li class="nav-item">
   <a class="nav-link" href="{{ route('operadora.facturacion') }}">
     <i class="mdi mdi-cash-multiple menu-icon"></i>
     <span class="menu-title">Facturación</span>

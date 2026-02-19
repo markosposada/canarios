@@ -52,9 +52,7 @@
                         <span class="menu-title">Menu Principal</span>
                     </a>
                 </li>
-                    <button type="button" class="btn btn-primary" onclick="enablePushNotifications()">
-  Activar notificaciones
-</button>
+
                 
 
 

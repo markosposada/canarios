@@ -57,6 +57,8 @@ class Kernel extends HttpKernel
 
         // ✅ TU middleware personalizado
         'rol' => \App\Http\Middleware\RolMiddleware::class,
+        'no.cache' => \App\Http\Middleware\NoCache::class,
+
 		
 
 

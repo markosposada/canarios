@@ -30,6 +30,8 @@ use App\Http\Controllers\Operadora\EstadoConductorControllerOperadora;
 
 use App\Http\Controllers\TaxistaController;
 
+use App\Http\Middleware\NoCache;
+
 use App\Http\Middleware\RolMiddleware;
 
 /*
@@ -56,23 +58,31 @@ Route::get('/', function () {
     return redirect('/login');
 })->name('home');
 
+
+
 /* =========================
 | AUTH: Login / Logout
 ========================= */
-Route::get('/login', [LoginController::class, 'showLoginForm'])
-    ->middleware('guest')
-    ->name('login');
+Route::middleware([NoCache::class])->group(function () {
 
-Route::post('/login', [LoginController::class, 'login'])
-    ->middleware('guest')
-    ->name('login.post');
+    Route::get('/login', [LoginController::class, 'showLoginForm'])
+        ->middleware('guest')
+        ->name('login');
 
-Route::post('/logout', function () {
-    Auth::logout();
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-    return redirect('/login');
-})->name('logout');
+    Route::post('/login', [LoginController::class, 'login'])
+        ->middleware('guest')
+        ->name('login.post');
+
+    Route::post('/logout', function () {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+        return redirect('/login');
+    })->name('logout');
+
+});
+
+
 
 // Redirección antigua
 Route::get('/index', fn () => redirect('/login'));
@@ -80,6 +90,7 @@ Route::get('/index', fn () => redirect('/login'));
 /* =========================
 | AUTH: Registro / Password (placeholder)
 ========================= */
+
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register']);
 

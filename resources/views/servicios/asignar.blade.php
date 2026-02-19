@@ -204,7 +204,7 @@
           📍 <span id="modalDireccionServicio">Dirección no definida</span>
         </div>
 
-        <input type="text"
+        <input type="number"
                id="inpBuscarMovil"
                class="form-control"
                placeholder="Buscar por móvil">
@@ -912,13 +912,13 @@ async function asignar(mo_id) {
           'La información del servicio es la siguiente:',
           `🚕 Móvil: ${movil}`,
           `🔖 Placa: ${placa}`,
-          `Puede ampliar la información ingresando este codigo ${token} en el siguiente enlace🔗: ${urlConsulta}`
+          `Puede ampliar la información ingresando en el siguiente enlace🔗: ${urlConsulta}`
         ].join('\n');
 
         const ok = await copiarAlPortapapeles(texto);
 
         if (ok) {
-          Swal.fire({ icon:'success', title:'Copiado', text:'La información fue copiada ✅', timer:1200, showConfirmButton:false });
+          Swal.fire({ icon:'success', title:'Copiado', text:'La información fue copiada ✅', timer:800, showConfirmButton:false });
         } else {
           Swal.fire({ icon:'warning', title:'No se pudo copiar', text:'El navegador bloqueó el portapapeles. Copia manualmente.' });
         }
