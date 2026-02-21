@@ -116,28 +116,69 @@ public function detalleConductorParaLicencia(Request $request)
 
 
     // Guardar cambios
-    public function actualizarLicencia(Request $request)
-    {
-        $request->validate([
-            'cedula' => 'required',
-            'nombres' => 'required|string|max:255',
-            'licencia' => 'required|string|max:50',
-            'fecha' => 'required|date'
-        ]);
+public function actualizarLicencia(Request $request)
+{
+    $request->validate([
+        'cedula_original' => 'required|integer',
+        'cedula_nueva'    => 'required|integer',
+        'nombres'         => 'required|string|max:255',
+        'licencia'        => 'required|string|max:50',
+        'fecha'           => 'required|date',
+    ]);
 
-        $conductor = Conductor::where('conduc_cc', $request->cedula)->first();
+    $old = (int) $request->cedula_original;
+    $new = (int) $request->cedula_nueva;
 
+    return DB::transaction(function () use ($request, $old, $new) {
+
+        $conductor = Conductor::where('conduc_cc', $old)->lockForUpdate()->first();
         if (!$conductor) {
-            return redirect()->back()->with('error', 'Conductor no encontrado.');
+            return back()->with('error', 'Conductor no encontrado.');
         }
 
-        $conductor->conduc_nombres = $request->nombres;
+        // si cambió la cédula
+        if ($new !== $old) {
+
+            // valida que no exista la nueva
+            $existe = Conductor::where('conduc_cc', $new)->exists();
+            if ($existe) {
+                return back()->with('error', 'La cédula nueva ya existe.');
+            }
+
+            // ✅ actualiza tablas que NO tienen FK
+            DB::table('sancion')
+                ->where('sancion_condu', $old)
+                ->update(['sancion_condu' => $new]);
+
+            DB::table('numfact')
+                ->where('numfact_conductor', $old)
+                ->update(['numfact_conductor' => $new]);
+
+            DB::table('facturacion_operadora')
+                ->where('fo_conductor', $old)
+                ->update(['fo_conductor' => $new]);
+
+            // ✅ users (es varchar)
+            DB::table('users')
+                ->where('cedula', (string)$old)
+                ->update(['cedula' => (string)$new]);
+
+            // ✅ ahora sí, cambia la PK del conductor
+            // (movil se actualizará SOLO por ON UPDATE CASCADE)
+            $conductor->conduc_cc = $new;
+        }
+
+        // actualiza licencia/datos
+        $conductor->conduc_nombres  = $request->nombres;
         $conductor->conduc_licencia = $request->licencia;
-        $conductor->conduc_fecha = $request->fecha;
+        $conductor->conduc_fecha    = $request->fecha;
         $conductor->save();
 
-        return redirect()->back()->with('success', 'Licencia actualizada correctamente.');
-    }
+        return back()->with('success', 'Licencia actualizada correctamente.');
+    });
+}
+
+
 
     // Mostrar vista con móviles disponibles
     public function asignar()

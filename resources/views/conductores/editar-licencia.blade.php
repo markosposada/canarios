@@ -50,17 +50,22 @@
       {{-- FORMULARIO --}}
       <form action="{{ route('conductores.actualizarLicencia') }}" method="POST" id="formularioLicencia" class="d-none">
         @csrf
-        <input type="hidden" name="cedula" id="formCedula">
+
+        {{-- Cédula original oculta (para buscar registro) --}}
+        <input type="hidden" name="cedula_original" id="cedulaOriginal">
 
         <div class="row g-2">
+
+          {{-- CÉDULA EDITABLE --}}
           <div class="col-12 col-md-4">
             <label class="form-label">Cédula</label>
-            <input type="text" id="cedulaMostrada" class="form-control mono" disabled>
+            <input type="text" name="cedula_nueva" id="cedulaNueva" class="form-control mono" required>
+            <div class="muted-sm mt-1">Puedes modificar la cédula si es necesario.</div>
           </div>
 
           <div class="col-12 col-md-8">
             <label class="form-label">Nombre completo</label>
-            <input type="text" name="nombres" id="formNombre" class="form-control">
+            <input type="text" name="nombres" id="formNombre" class="form-control" required>
           </div>
 
           <div class="col-12 col-md-6">
@@ -89,52 +94,33 @@
   </div>
 </div>
 
-{{-- MODAL BUSCAR CONDUCTOR (Bootstrap 4) --}}
-<div class="modal fade" id="modalBuscarConductor" tabindex="-1" role="dialog" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-scrollable" role="document">
+{{-- MODAL BUSCAR CONDUCTOR --}}
+<div class="modal fade" id="modalBuscarConductor" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
 
       <div class="modal-header">
-        <h5 class="modal-title mb-0">Buscar conductor</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <h5 class="modal-title">Buscar conductor</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
       </div>
 
       <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label fw-bold">Escribe nombre o cédula</label>
-          <input type="text" id="qConductor" class="form-control" placeholder="Ej: Adán / 123456">
-          <div class="muted-sm mt-1">Se buscará mientras escribes (mínimo 2 caracteres).</div>
-        </div>
+        <input type="text" id="qConductor" class="form-control" placeholder="Nombre o cédula">
 
-        <div id="buscMsg" class="mt-2"></div>
-
-        {{-- MOBILE: Cards --}}
-        <div class="d-md-none mt-3" id="listaConductoresCards">
-          <div class="text-muted text-center py-3">Escribe para buscar...</div>
-        </div>
-
-        {{-- DESKTOP: Tabla --}}
-        <div class="table-responsive d-none d-md-block mt-3">
-          <table class="table table-sm table-striped" id="tablaConductores">
+        <div class="table-responsive mt-3">
+          <table class="table table-sm table-striped">
             <thead class="table-dark">
               <tr>
-                <th style="width:140px;">Cédula</th>
+                <th>Cédula</th>
                 <th>Nombre</th>
-                <th style="width:120px;">Estado</th>
-                <th style="width:140px;"></th>
+                <th></th>
               </tr>
             </thead>
-            <tbody>
-              <tr><td colspan="4" class="text-muted text-center">Escribe para buscar...</td></tr>
+            <tbody id="tablaConductores">
+              <tr><td colspan="3" class="text-center text-muted">Escribe para buscar...</td></tr>
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
       </div>
 
     </div>
@@ -142,259 +128,115 @@
 </div>
 @endsection
 
+
 @section('scripts')
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function(){
 
-  // ✅ ESTE endpoint es el que retorna la LISTA para el modal (GET ?q=)
   const urlBuscar = "{{ route('conductores.licencia.buscar') }}";
 
-  const btnAbrir = document.getElementById('btnAbrirBuscar');
   const qInput = document.getElementById('qConductor');
-  const buscMsg = document.getElementById('buscMsg');
-
-  // Desktop table
-  const tbody = document.querySelector('#tablaConductores tbody');
-  // Mobile cards
-  const listaCards = document.getElementById('listaConductoresCards');
-
+  const tabla = document.getElementById('tablaConductores');
   const formulario = document.getElementById('formularioLicencia');
-  const formCedula = document.getElementById('formCedula');
+
+  const cedulaOriginal = document.getElementById('cedulaOriginal');
+  const cedulaNueva = document.getElementById('cedulaNueva');
   const formNombre = document.getElementById('formNombre');
   const formLicencia = document.getElementById('formLicencia');
   const formFecha = document.getElementById('formFecha');
-  const cedulaMostrada = document.getElementById('cedulaMostrada');
   const conductorPreview = document.getElementById('conductorPreview');
-  const btnLimpiar = document.getElementById('btnLimpiar');
 
-  function esc(str){
-    if(str === null || str === undefined) return '';
-    return String(str)
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'","&#039;");
-  }
-
-  function estadoTexto(e){
-    e = Number(e);
-    if(e === 1) return 'ACTIVO';
-    if(e === 2) return 'INACTIVO';
-    if(e === 3) return 'SANCIONADO';
-    if(e === 4) return 'RETIRADO';
-    return '—';
-  }
-
-  function showBuscMsg(html, cls='alert alert-info'){
-    buscMsg.innerHTML = `<div class="${cls} py-2 mb-0">${html}</div>`;
-  }
-  function clearBuscMsg(){ buscMsg.innerHTML = ''; }
-
-  function abrirModal(){
-    if (!window.$) {
-      Swal.fire('Error', 'No se encontró jQuery en el layout.', 'error');
-      return;
-    }
-    $('#modalBuscarConductor').modal('show');
-    setTimeout(()=> qInput && qInput.focus(), 250);
-  }
-
-  function cerrarModal(){
-    if (window.$) $('#modalBuscarConductor').modal('hide');
-  }
-
-  btnAbrir.addEventListener('click', abrirModal);
-
-  // Reset buscador al cerrar
-  if (window.$) {
-    $('#modalBuscarConductor').on('hidden.bs.modal', function(){
-      qInput.value = '';
-      clearBuscMsg();
-      tbody.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Escribe para buscar...</td></tr>`;
-      listaCards.innerHTML = `<div class="text-muted text-center py-3">Escribe para buscar...</div>`;
-    });
-  }
-
-  let t = null;
-  qInput.addEventListener('input', function(){
-    const q = qInput.value.trim();
-    clearTimeout(t);
-
-    if(q.length < 2){
-      tbody.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Escribe al menos 2 caracteres...</td></tr>`;
-      listaCards.innerHTML = `<div class="text-muted text-center py-3">Escribe al menos 2 caracteres...</div>`;
-      clearBuscMsg();
-      return;
-    }
-
-    t = setTimeout(()=> buscar(q), 250);
+  document.getElementById('btnAbrirBuscar').addEventListener('click', function(){
+      $('#modalBuscarConductor').modal('show');
   });
 
-  function renderDesktop(rows){
-    if(rows.length === 0){
-      tbody.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Sin resultados</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = '';
-    rows.forEach(r => {
-      tbody.insertAdjacentHTML('beforeend', `
-        <tr>
-          <td class="mono">${esc(r.cedula)}</td>
-          <td class="cell-ellipsis" title="${esc(r.nombre)}">${esc(r.nombre)}</td>
-          <td>${esc(estadoTexto(r.estado))}</td>
-          <td class="text-right">
-            <button type="button" class="btn btn-sm btn-primary btnSel" data-cc="${esc(r.cedula)}">
-              Seleccionar
-            </button>
-          </td>
-        </tr>
-      `);
-    });
-  }
-
-  function renderMobile(rows){
-    if(rows.length === 0){
-      listaCards.innerHTML = `<div class="text-muted text-center py-3">Sin resultados</div>`;
-      return;
-    }
-    let html = '';
-    rows.forEach(r => {
-      html += `
-        <div class="card card-soft mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between gap-2">
-              <div>
-                <div class="fw-bold">${esc(r.nombre)}</div>
-                <div class="muted-sm">Cédula: <span class="mono fw-semibold">${esc(r.cedula)}</span></div>
-                <div class="muted-sm">Estado: <b>${esc(estadoTexto(r.estado))}</b></div>
-              </div>
-              <div class="text-end">
-                <button type="button" class="btn btn-primary btn-touch btnSel" data-cc="${esc(r.cedula)}">
-                  Seleccionar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-    listaCards.innerHTML = html;
-  }
-
-  function bindSeleccion(){
-    document.querySelectorAll('.btnSel').forEach(b => {
-      b.addEventListener('click', function(){
-        const cc = this.getAttribute('data-cc');
-        seleccionar(cc);
-      });
-    });
-  }
-
-  function buscar(q){
-    tbody.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Buscando...</td></tr>`;
-    listaCards.innerHTML = `<div class="text-muted text-center py-3">Buscando...</div>`;
-    clearBuscMsg();
-
-    fetch(urlBuscar + '?q=' + encodeURIComponent(q), {
-      headers: { 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }
-    })
-    .then(r => {
-      if (r.status === 419) throw new Error('Sesión expirada (419)');
-      return r.json();
-    })
-    .then(j => {
-      const ok = (typeof j.ok === 'undefined') ? true : !!j.ok;
-      if(!ok) throw new Error('No se pudo buscar');
-
-      const rows = j.data || [];
-      renderDesktop(rows);
-      renderMobile(rows);
-      bindSeleccion();
-    })
-    .catch(e => {
-      console.error(e);
-      tbody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error buscando</td></tr>`;
-      listaCards.innerHTML = `<div class="text-danger text-center py-3">Error buscando</div>`;
-      showBuscMsg('❌ ' + (e.message || 'Error'), 'alert alert-danger');
-    });
-  }
-
-  function seleccionar(cedula){
-    // ✅ ESTE endpoint trae los datos COMPLETOS para llenar el formulario
-    fetch("{{ route('conductores.licencia.detalle') }}", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ cedula })
-    })
-    .then(r => {
-      if (r.status === 419) throw new Error('Sesión expirada (419)');
-      return r.json();
-    })
-    .then(data => {
-      if(!data.encontrado){
-        Swal.fire('No se encontró el conductor', '', 'error');
-        return;
+  qInput.addEventListener('input', function(){
+      let q = this.value.trim();
+      if(q.length < 2){
+          tabla.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Mínimo 2 caracteres</td></tr>';
+          return;
       }
 
-      formulario.classList.remove('d-none');
+      fetch(urlBuscar + '?q=' + q)
+      .then(r => r.json())
+      .then(data => {
+          tabla.innerHTML = '';
+          if(data.data.length === 0){
+              tabla.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
+              return;
+          }
 
-      formCedula.value = data.cedula;
-      cedulaMostrada.value = data.cedula;
+          data.data.forEach(c => {
+              tabla.innerHTML += `
+                <tr>
+                  <td>${c.cedula}</td>
+                  <td>${c.nombre}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary btnSel" data-cc="${c.cedula}">
+                      Seleccionar
+                    </button>
+                  </td>
+                </tr>`;
+          });
 
-      formNombre.value = data.nombres || '';
-      formLicencia.value = data.licencia || '';
-      formFecha.value = data.fecha || '';
-
-      conductorPreview.value = `${data.nombres} (${data.cedula})`;
-      cerrarModal();
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Conductor seleccionado',
-        timer: 900,
-        showConfirmButton: false
+          document.querySelectorAll('.btnSel').forEach(btn=>{
+              btn.addEventListener('click', function(){
+                  seleccionar(this.dataset.cc);
+              });
+          });
       });
-    })
-    .catch(e => {
-      console.error(e);
-      Swal.fire('Error cargando datos', e.message || '', 'error');
-    });
+  });
+
+  function seleccionar(cedula){
+      fetch("{{ route('conductores.licencia.detalle') }}", {
+          method:'POST',
+          headers:{
+              'Content-Type':'application/json',
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({cedula})
+      })
+      .then(r=>r.json())
+      .then(data=>{
+          if(!data.encontrado){
+              Swal.fire('No encontrado','','error');
+              return;
+          }
+
+          formulario.classList.remove('d-none');
+
+          cedulaOriginal.value = data.cedula;
+          cedulaNueva.value = data.cedula;
+
+          formNombre.value = data.nombres;
+          formLicencia.value = data.licencia;
+          formFecha.value = data.fecha;
+
+          conductorPreview.value = data.nombres + ' ('+data.cedula+')';
+
+          $('#modalBuscarConductor').modal('hide');
+      });
   }
 
-  if(btnLimpiar){
-    btnLimpiar.addEventListener('click', function(){
+  document.getElementById('btnLimpiar').addEventListener('click', function(){
       formulario.classList.add('d-none');
-      formCedula.value = '';
-      cedulaMostrada.value = '';
-      formNombre.value = '';
-      formLicencia.value = '';
-      formFecha.value = '';
-      conductorPreview.value = '';
-    });
-  }
+      cedulaOriginal.value='';
+      cedulaNueva.value='';
+      formNombre.value='';
+      formLicencia.value='';
+      formFecha.value='';
+      conductorPreview.value='';
+  });
 
   @if(session('success'))
-    Swal.fire({
-      icon: 'success',
-      title: '{{ session('success') }}',
-      confirmButtonText: 'Aceptar'
-    });
+    Swal.fire('Correcto','{{ session('success') }}','success');
   @endif
 
   @if(session('error'))
-    Swal.fire({
-      icon: 'error',
-      title: '{{ session('error') }}',
-      confirmButtonText: 'Aceptar'
-    });
+    Swal.fire('Error','{{ session('error') }}','error');
   @endif
+
 });
 </script>
 @endsection
