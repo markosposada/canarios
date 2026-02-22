@@ -13,6 +13,8 @@ class AutoFacturarPendientes extends Command
 
     public function handle()
     {
+        \Log::info('AUTO-FACTURAR ejecutado', ['now' => now()->toDateTimeString()]);
+
         $days = (int)$this->option('days');
         if ($days < 1) $days = 3;
 

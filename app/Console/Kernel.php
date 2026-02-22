@@ -21,6 +21,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('canarios:auto-facturar --days=3')
             ->dailyAt('02:00')
+            ->timezone('America/Bogota')
             ->withoutOverlapping();
     }
 
