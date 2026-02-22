@@ -11,7 +11,7 @@
 
   $conductor = DB::table('conductores')
     ->where('conduc_cc', $cedula)
-    ->select('conduc_estado','conduc_nombres')
+    ->select('conduc_estado','conduc_nombres','conduc_cc')
     ->first();
 
   $estado = (int)($conductor->conduc_estado ?? 2);
@@ -21,20 +21,56 @@
     2 => 'INACTIVO',
     3 => 'SANCIONADO',
     4 => 'RETIRADO',
+    5 => 'EVADIDO',
     default => 'DESCONOCIDO',
   };
 
-  $estadoClase = match ($estado) {
-    1 => 'text-success',
-    2 => 'text-danger',
-    3 => 'text-warning',
-    4 => 'text-dark',
-    default => 'text-secondary',
+  // UI del banner
+  $estadoUI = match ($estado) {
+    1 => [
+      'icon' => 'mdi-check-decagram',
+      'grad' => 'linear-gradient(135deg,#0f766e 0%,#22c55e 55%,#86efac 100%)',
+      'border' => 'rgba(34,197,94,.35)',
+      'msg' => 'Estás habilitado para recibir servicios.',
+    ],
+    2 => [
+      'icon' => 'mdi-close-octagon',
+      'grad' => 'linear-gradient(135deg,#7f1d1d 0%,#ef4444 55%,#fb7185 100%)',
+      'border' => 'rgba(239,68,68,.35)',
+      'msg' => 'Estás inactivo. No deberían asignarte servicios.',
+    ],
+    3 => [
+      'icon' => 'mdi-alert-decagram',
+      'grad' => 'linear-gradient(135deg,#7c2d12 0%,#f97316 55%,#fde68a 100%)',
+      'border' => 'rgba(249,115,22,.35)',
+      'msg' => 'Tu cuenta está SANCIONADA. Debes acercarte a la oficina principal.',
+    ],
+    4 => [
+      'icon' => 'mdi-account-cancel',
+      'grad' => 'linear-gradient(135deg,#111827 0%,#6b7280 55%,#374151 100%)',
+      'border' => 'rgba(107,114,128,.35)',
+      'msg' => 'Tu estado figura como RETIRADO. Debes acercarte a la oficina principal.',
+    ],
+    5 => [
+      'icon' => 'mdi-shield-alert',
+      'grad' => 'linear-gradient(135deg,#4c1d95 0%,#7c3aed 55%,#c4b5fd 100%)',
+      'border' => 'rgba(124,58,237,.35)',
+      'msg' => 'Tu cuenta está EVADIDA. Debes acercarte a la oficina principal.',
+    ],
+    default => [
+      'icon' => 'mdi-help-circle',
+      'grad' => 'linear-gradient(135deg,#334155 0%,#64748b 55%,#94a3b8 100%)',
+      'border' => 'rgba(100,116,139,.35)',
+      'msg' => 'No se pudo determinar tu estado. Comunícate con la oficina.',
+    ],
   };
+
+  $bloqueado = in_array($estado, [3,4,5], true);
 
   // Hoy en Bogotá (para comparar con dis_fecha)
   $hoy = now()->setTimezone('America/Bogota')->format('Y-m-d');
 
+  // Último servicio
   $taxisConductor = DB::table('movil')
     ->where('mo_conductor', $cedula)
     ->pluck('mo_id');
@@ -50,6 +86,7 @@
       ->first();
   }
 
+  // Facturación 5 días
   $desdeFact = now()->setTimezone('America/Bogota')->subDays(5)->format('Y-m-d');
 
   $fact = DB::table('facturacion_operadora as fo')
@@ -67,41 +104,158 @@
   $factPagado = (int)($fact->pagado ?? 0);
 @endphp
 
-<div class="row mb-3">
+<style>
+  /* ===== Banner estado ===== */
+  .estado-hero{
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 10px 26px rgba(0,0,0,.10);
+  }
+
+  .estado-hero .wrap{
+    padding: 18px 18px;
+    color:#fff;
+    position: relative;
+    gap: 14px;
+  }
+
+  .estado-hero .big{
+    font-weight: 900;
+    letter-spacing: .4px;
+    font-size: 22px;
+    line-height: 1.15;
+    margin: 10px 0 0 0;
+    word-break: break-word;
+  }
+
+  .estado-hero .sub{
+    opacity:.92;
+    margin: 6px 0 0 0;
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .estado-hero .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.22);
+    font-weight: 900;
+    letter-spacing: .3px;
+    font-size: 12px;
+    line-height: 1;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  .estado-hero .hint{
+    margin-top: 12px;
+    background: rgba(0,0,0,.16);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .estado-hero .right{
+    text-align:right;
+    min-width: 160px;
+    flex: 0 0 auto;
+  }
+
+  .estado-hero .icon{
+    font-size: 54px;
+    opacity: .95;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
+  }
+
+  /* ✅ Ajuste para móvil: evita que se “monten” los textos */
+  @media (max-width: 576px){
+    .estado-hero .wrap{
+      padding: 16px 14px;
+      flex-direction: column;
+      align-items: flex-start !important;
+    }
+
+    .estado-hero .right{
+      width: 100%;
+      text-align: center;
+      min-width: 0;
+      margin-top: 6px;
+      opacity: .9;
+    }
+
+    .estado-hero .icon{
+      font-size: 44px;
+    }
+
+    .estado-hero .chip{
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .estado-hero .big{
+      font-size: 20px;
+      margin-top: 10px;
+    }
+
+    .estado-hero .sub{
+      font-size: 13px;
+    }
+  }
+</style>
+
+<div class="row mb-2">
   <div class="col-12">
     <h3 class="mb-1">MÓDULO CONDUCTOR</h3>
     <p class="text-muted mb-0">Accesos rápidos</p>
   </div>
 </div>
 
-<style>
-  .dash-card {
-    transition: transform .12s ease, box-shadow .12s ease;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 1px solid rgba(0,0,0,.06);
-  }
-  .dash-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.10); }
-  .dash-card .card-body { padding: 18px 18px; }
-  .dash-icon {
-    width: 52px; height: 52px; border-radius: 14px;
-    display:flex; align-items:center; justify-content:center;
-    background: rgba(0,0,0,.04);
-  }
-  .dash-title { font-size: .95rem; letter-spacing: .2px; }
-  .dash-sub { font-size: .85rem; color:#6c757d; margin:0; }
-  .dash-link { text-decoration:none !important; color: inherit !important; display:block; }
+{{-- ===== Banner llamativo (lo primero que ven) ===== --}}
+<div class="row mb-3">
+  <div class="col-12">
+   <div class="estado-hero">
+  <div class="wrap d-flex justify-content-between flex-wrap"
+       style="background: {{ $estadoUI['grad'] }}; border-bottom: 1px solid {{ $estadoUI['border'] }};">
+    <div class="flex-grow-1" style="min-width:0;">
+      <div class="chip">
+        <i class="mdi {{ $estadoUI['icon'] }}" style="font-size:18px;"></i>
+        ESTADO: {{ $estadoTexto }}
+      </div>
 
-  .mini-pill {
-    display:inline-block;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    font-size: 12px;
-    font-weight: 800;
-  }
-</style>
+
+       <p class="sub mb-0">
+        Conductor: <strong>{{ $conductor->conduc_nombres }}</strong>
+      </p>
+
+      <p class="sub mb-0">
+        Cédula: <strong>{{ $cedula }}</strong>
+      </p>
+
+      <div class="hint">
+        {{ $estadoUI['msg'] }}
+        @if($bloqueado)
+          <div class="mt-1" style="font-weight:800;">
+            ⛔ Estado bloqueado: no podrás operar ni recibir servicios.
+          </div>
+        @endif
+      </div>
+    </div>
+
+    <div class="right">
+      <i class="mdi {{ $estadoUI['icon'] }} icon"></i>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
 
 <div class="row">
 
@@ -249,35 +403,25 @@
   (function pushModalOnce(){
     const KEY = 'push_modal_prompted_once';
 
-    // ya lo mostramos antes
     if (localStorage.getItem(KEY) === '1') return;
-
-    // si no soporta
     if (!('Notification' in window)) return;
 
-    // si ya está granted/denied no lo mostramos
     if (Notification.permission === 'granted' || Notification.permission === 'denied') {
       localStorage.setItem(KEY, '1');
       return;
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      // marcar “ya mostrado” para no insistir si recargan
       localStorage.setItem(KEY, '1');
 
-      // abre modal (Bootstrap 4 => jQuery)
       if (window.$ && $('#modalPush').length) {
         $('#modalPush').modal({ backdrop: 'static', keyboard: true });
         $('#modalPush').modal('show');
       }
 
-      // ahora no
       const btnLater = document.getElementById('btnPushLater');
-      btnLater?.addEventListener('click', () => {
-        // aquí podrías guardar timestamp si quieres reintentar luego
-      });
+      btnLater?.addEventListener('click', () => {});
 
-      // activar
       const btnEnable = document.getElementById('btnPushEnable');
       btnEnable?.addEventListener('click', async () => {
         const msg = document.getElementById('pushModalMsg');
@@ -292,7 +436,6 @@
 
           if (msg) msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Notificaciones activadas.</div>';
 
-          // cerrar
           setTimeout(() => {
             if (window.$) $('#modalPush').modal('hide');
           }, 700);

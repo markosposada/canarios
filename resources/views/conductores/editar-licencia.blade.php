@@ -26,7 +26,7 @@
 
 <div class="container py-3 page-wrap">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-    <h3 class="mb-0 page-title">EDITAR LICENCIA DE CONDUCTOR</h3>
+    <h3 class="mb-0 page-title">EDITAR CONDUCTOR</h3>
     <a href="{{ url('/dashboard') }}" class="btn btn-outline-secondary btn-sm">← Regresar</a>
   </div>
 
@@ -78,7 +78,30 @@
             <input type="date" name="fecha" id="formFecha" class="form-control" required>
           </div>
 
-          <div class="col-12 d-flex align-items-end gap-2">
+          {{-- ✅ CAMBIO DE CONTRASEÑA (OPCIONAL) --}}
+          <div class="col-12 mt-2">
+            <hr>
+            <h5 class="mb-1">Contraseña de ingreso</h5>
+            <div class="muted-sm">Solo llena esto si quieres cambiar la contraseña del conductor.</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label">Nueva contraseña</label>
+            <div class="input-group">
+              <input type="password" name="password" id="password" class="form-control" minlength="6" autocomplete="new-password" placeholder="Dejar vacío si no cambia">
+              <div class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary" id="btnTogglePass">👁</button>
+              </div>
+            </div>
+            <div class="muted-sm mt-1">Mínimo 6 caracteres.</div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label">Confirmar contraseña</label>
+            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" minlength="6" autocomplete="new-password" placeholder="Repite la contraseña">
+          </div>
+
+          <div class="col-12 d-flex align-items-end gap-2 mt-2">
             <button type="submit" class="btn btn-primary btn-touch">
               <i class="mdi mdi-content-save"></i> Guardar cambios
             </button>
@@ -128,7 +151,6 @@
 </div>
 @endsection
 
-
 @section('scripts')
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -147,45 +169,69 @@ document.addEventListener('DOMContentLoaded', function(){
   const formFecha = document.getElementById('formFecha');
   const conductorPreview = document.getElementById('conductorPreview');
 
+  const pass = document.getElementById('password');
+  const pass2 = document.getElementById('password_confirmation');
+  const btnTogglePass = document.getElementById('btnTogglePass');
+
   document.getElementById('btnAbrirBuscar').addEventListener('click', function(){
       $('#modalBuscarConductor').modal('show');
   });
 
+  // Mostrar/ocultar contraseña
+  if(btnTogglePass){
+    btnTogglePass.addEventListener('click', function(){
+      const type = pass.getAttribute('type') === 'password' ? 'text' : 'password';
+      pass.setAttribute('type', type);
+      pass2.setAttribute('type', type);
+    });
+  }
+
+  let tmr = null;
   qInput.addEventListener('input', function(){
+      clearTimeout(tmr);
       let q = this.value.trim();
       if(q.length < 2){
           tabla.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Mínimo 2 caracteres</td></tr>';
           return;
       }
 
-      fetch(urlBuscar + '?q=' + q)
-      .then(r => r.json())
-      .then(data => {
-          tabla.innerHTML = '';
-          if(data.data.length === 0){
-              tabla.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
-              return;
-          }
+      tmr = setTimeout(() => {
+        fetch(urlBuscar + '?q=' + encodeURIComponent(q), {
+          headers: { 'X-Requested-With':'XMLHttpRequest', 'Accept':'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const rows = data.data || [];
+            tabla.innerHTML = '';
 
-          data.data.forEach(c => {
-              tabla.innerHTML += `
-                <tr>
-                  <td>${c.cedula}</td>
-                  <td>${c.nombre}</td>
-                  <td>
-                    <button class="btn btn-sm btn-primary btnSel" data-cc="${c.cedula}">
-                      Seleccionar
-                    </button>
-                  </td>
-                </tr>`;
-          });
+            if(rows.length === 0){
+                tabla.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
+                return;
+            }
 
-          document.querySelectorAll('.btnSel').forEach(btn=>{
-              btn.addEventListener('click', function(){
-                  seleccionar(this.dataset.cc);
-              });
-          });
-      });
+            rows.forEach(c => {
+                tabla.innerHTML += `
+                  <tr>
+                    <td>${c.cedula}</td>
+                    <td>${c.nombre}</td>
+                    <td>
+                      <button type="button" class="btn btn-sm btn-primary btnSel" data-cc="${c.cedula}">
+                        Seleccionar
+                      </button>
+                    </td>
+                  </tr>`;
+            });
+
+            document.querySelectorAll('.btnSel').forEach(btn=>{
+                btn.addEventListener('click', function(){
+                    seleccionar(this.dataset.cc);
+                });
+            });
+        })
+        .catch(()=> {
+          tabla.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error buscando</td></tr>';
+        });
+      }, 200);
   });
 
   function seleccionar(cedula){
@@ -193,7 +239,9 @@ document.addEventListener('DOMContentLoaded', function(){
           method:'POST',
           headers:{
               'Content-Type':'application/json',
-              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'X-Requested-With':'XMLHttpRequest',
+              'Accept':'application/json'
           },
           body: JSON.stringify({cedula})
       })
@@ -209,14 +257,19 @@ document.addEventListener('DOMContentLoaded', function(){
           cedulaOriginal.value = data.cedula;
           cedulaNueva.value = data.cedula;
 
-          formNombre.value = data.nombres;
-          formLicencia.value = data.licencia;
-          formFecha.value = data.fecha;
+          formNombre.value = data.nombres || '';
+          formLicencia.value = data.licencia || '';
+          formFecha.value = data.fecha || '';
 
-          conductorPreview.value = data.nombres + ' ('+data.cedula+')';
+          // limpiar password al seleccionar
+          pass.value = '';
+          pass2.value = '';
+
+          conductorPreview.value = (data.nombres || '') + ' ('+(data.cedula || '')+')';
 
           $('#modalBuscarConductor').modal('hide');
-      });
+      })
+      .catch(() => Swal.fire('Error','No se pudo cargar el conductor','error'));
   }
 
   document.getElementById('btnLimpiar').addEventListener('click', function(){
@@ -226,6 +279,8 @@ document.addEventListener('DOMContentLoaded', function(){
       formNombre.value='';
       formLicencia.value='';
       formFecha.value='';
+      pass.value='';
+      pass2.value='';
       conductorPreview.value='';
   });
 

@@ -171,7 +171,7 @@ class AutoFacturarPendientes extends Command
                 // Sancionar conductor por no presentarse: estado = 3
                 DB::table('conductores')
                     ->where('conduc_cc', $movil->mo_conductor)
-                    ->update(['conduc_estado' => 3]);
+                    ->update(['conduc_estado' => 5]);
 
                 $procesados++;
             });

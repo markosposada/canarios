@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if(e === 1) return 'ACTIVO';
     if(e === 2) return 'INACTIVO';
     if(e === 3) return 'SANCIONADO';
+    if(e === 5) return 'EVADIDO';
     if(e === 4) return 'RETIRADO';
     return '—';
   }
@@ -165,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
               <button class="btn btn-sm btn-success btnSet" data-cc="${esc(r.cedula)}" data-est="1">Activo</button>
               <button class="btn btn-sm btn-secondary btnSet" data-cc="${esc(r.cedula)}" data-est="2">Inactivo</button>
               <button class="btn btn-sm btn-warning btnSet" data-cc="${esc(r.cedula)}" data-est="3">Sanc.</button>
+              <button class="btn btn-sm btn-warning btnSet" data-cc="${esc(r.cedula)}" data-est="5">Evadido</button>
               <button class="btn btn-sm btn-dark btnSet" data-cc="${esc(r.cedula)}" data-est="4">Ret.</button>
             </div>
           </td>
@@ -206,6 +208,9 @@ document.addEventListener('DOMContentLoaded', function () {
               </div>
               <div class="col-6">
                 <button class="btn btn-warning w-100 btn-state btnSet" data-cc="${esc(r.cedula)}" data-est="3">Sancionado</button>
+              </div>
+              <div class="col-6">
+                <button class="btn btn-warning w-100 btn-state btnSet" data-cc="${esc(r.cedula)}" data-est="5">Evadido</button>
               </div>
               <div class="col-6">
                 <button class="btn btn-dark w-100 btn-state btnSet" data-cc="${esc(r.cedula)}" data-est="4">Retirado</button>

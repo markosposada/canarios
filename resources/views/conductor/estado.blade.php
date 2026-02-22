@@ -10,14 +10,16 @@
   $esInactivo = ($estado === 2);
   $esSancionado = ($estado === 3);
   $esRetirado = ($estado === 4);
+  $esEvadido = ($estado === 5);
 
-  $bloqueado = ($esSancionado || $esRetirado);
+  $bloqueado = ($esSancionado || $esRetirado || $esEvadido);
 @endphp
 
 <div class="row justify-content-center">
   <div class="col-md-10 col-lg-8">
     <div class="card shadow-sm border-0" style="border-radius:18px; overflow:hidden;">
       <div class="card-body p-0">
+
         {{-- Header con gradiente --}}
         <div class="p-4 text-white"
              style="background: linear-gradient(135deg, #1f3c88 0%, #3a7bd5 50%, #00d2ff 100%);">
@@ -38,6 +40,7 @@
                 @elseif($esInactivo) INACTIVO
                 @elseif($esSancionado) SANCIONADO
                 @elseif($esRetirado) RETIRADO
+                @elseif($esEvadido) EVADIDO
                 @else DESCONOCIDO
                 @endif
               </div>
@@ -53,7 +56,7 @@
               <ul class="mb-0">
                 <li>Si estás <strong>ACTIVO</strong>, quedas disponible para recibir servicios.</li>
                 <li>Si estás <strong>INACTIVO</strong>, no deberían asignarte servicios.</li>
-                <li>Si estás <strong>SANCIONADO</strong> o <strong>RETIRADO</strong>, no puedes cambiar tu estado desde aquí.</li>
+                <li>Si estás <strong>SANCIONADO</strong>, <strong>RETIRADO</strong> o <strong>EVADIDO</strong>, no puedes cambiar tu estado desde aquí.</li>
               </ul>
 
               {{-- Panel principal --}}
@@ -71,18 +74,22 @@
                       @elseif($esInactivo) Estás fuera de línea ⛔
                       @elseif($esSancionado) Estado: Sancionado ⛔
                       @elseif($esRetirado) Estado: Retirado ⛔
+                      @elseif($esEvadido) Estado: Evadido ⛔
                       @else Estado no disponible
                       @endif
                     </div>
+
                     <div class="text-muted" id="estadoDesc" style="font-size:14px;">
                       @if($esActivo)
-                        Puedes recibir servicios ahora mismo, recuerda activar el movil para que te sean asignadas las carreras
+                        Puedes recibir servicios ahora mismo. Recuerda activar el movil para que te sean asignadas las carreras.
                       @elseif($esInactivo)
                         No recibirás asignaciones mientras estés inactivo.
                       @elseif($esSancionado)
                         Debes acercarte a la oficina principal para resolver tu situación.
                       @elseif($esRetirado)
                         Debes acercarte a la oficina principal. Tu estado figura como retirado.
+                      @elseif($esEvadido)
+                        Debes acercarte a la oficina principal para resolver tu situación.
                       @else
                         Comunícate con la oficina.
                       @endif
@@ -91,15 +98,14 @@
                 </div>
               </div>
 
-             
-              
-
               {{-- Aviso extra cuando está bloqueado --}}
               @if($bloqueado)
                 <div class="mt-3 alert alert-warning" style="border-radius:14px;">
                   <strong>Acción requerida:</strong>
                   @if($esSancionado)
                     No puedes modificar tu estado porque estás <strong>SANCIONADO</strong>. Acércate a la oficina principal.
+                  @elseif($esEvadido)
+                    No puedes modificar tu estado porque estás <strong>EVADIDO</strong>. Acércate a la oficina principal.
                   @else
                     No puedes modificar tu estado porque estás <strong>RETIRADO</strong>. Acércate a la oficina principal.
                   @endif
@@ -158,7 +164,7 @@
       </div>
     </div>
 
-    {{-- Modal confirmación (solo se usa si NO está bloqueado) --}}
+    {{-- Modal confirmación --}}
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius:18px;">
@@ -190,6 +196,27 @@
           </div>
           <div class="modal-body">
             Debes acercarte a la <strong>oficina principal</strong>. Tu estado se encuentra <strong>Sancionado</strong>.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-dismiss="modal">Entendido</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{-- Modal: Evadido --}}
+    <div class="modal fade" id="modalEvadido" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:18px; overflow:hidden;">
+          <div class="modal-header text-white"
+               style="background: linear-gradient(135deg, #7c2d12 0%, #f97316 55%, #f59e0b 100%);">
+            <h5 class="modal-title">⚠️ Estado: Evadido</h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            Debes acercarte a la <strong>oficina principal</strong>. Tu estado se encuentra <strong>Evadido</strong>.
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-light" data-dismiss="modal">Entendido</button>
@@ -284,8 +311,6 @@
 
   let nextEstado = null;
 
-  const bloqueado = (estadoActual === 3 || estadoActual === 4);
-
   function renderUI(estado){
     estado = parseInt(estado);
 
@@ -293,6 +318,7 @@
     const esInactivo = (estado === 2);
     const esSancionado = (estado === 3);
     const esRetirado = (estado === 4);
+    const esEvadido = (estado === 5);
 
     // Badge
     if(esActivo){
@@ -307,6 +333,9 @@
     } else if(esRetirado){
       estadoBadge.className = 'badge badge-pill badge-dark';
       estadoBadge.textContent = 'RETIRADO';
+    } else if(esEvadido){
+      estadoBadge.className = 'badge badge-pill badge-dark';
+      estadoBadge.textContent = 'EVADIDO';
     } else {
       estadoBadge.className = 'badge badge-pill badge-dark';
       estadoBadge.textContent = 'DESCONOCIDO';
@@ -314,15 +343,21 @@
 
     // Panel
     estadoIcon.className = 'mdi ' + (esActivo ? 'mdi-access-point' : (esInactivo ? 'mdi-access-point-off' : 'mdi-alert-decagram'));
-    estadoTitle.textContent = esActivo ? 'Estás en línea ✅'
-                          : esInactivo ? 'Estás fuera de línea ⛔'
-                          : esSancionado ? 'Estado: Sancionado ⛔'
-                          : esRetirado ? 'Estado: Retirado ⛔'
-                          : 'Estado no disponible';
 
-    estadoDesc.textContent = esActivo ? 'Puedes recibir servicios ahora mismo. Recuerda activar el movil para que te sean asignadas las carreras'
-                        : esInactivo ? 'No recibirás asignaciones mientras estés inactivo.'
-                        : 'Debes acercarte a la oficina principal.';
+    estadoTitle.textContent =
+      esActivo ? 'Estás en línea ✅'
+      : esInactivo ? 'Estás fuera de línea ⛔'
+      : esSancionado ? 'Estado: Sancionado ⛔'
+      : esRetirado ? 'Estado: Retirado ⛔'
+      : esEvadido ? 'Estado: Evadido ⛔'
+      : 'Estado no disponible';
+
+    estadoDesc.textContent =
+      esActivo ? 'Puedes recibir servicios ahora mismo. Recuerda activar el movil para que te sean asignadas las carreras'
+      : esInactivo ? 'No recibirás asignaciones mientras estés inactivo.'
+      : (esSancionado || esEvadido) ? 'Debes acercarte a la oficina principal para resolver tu situación.'
+      : esRetirado ? 'Debes acercarte a la oficina principal. Tu estado figura como retirado.'
+      : 'Comunícate con la oficina.';
 
     // Botón solo para 1/2
     if(esActivo || esInactivo){
@@ -358,16 +393,10 @@
       let json = {};
       try { json = await res.json(); } catch(e){ json = {}; }
 
-      // bloqueado por backend
       if (!res.ok || !json.success) {
-        if (json.code === 'CONDUCTOR_SANCIONADO') {
-          $('#modalSancionado').modal('show');
-          return;
-        }
-        if (json.code === 'CONDUCTOR_RETIRADO') {
-          $('#modalRetirado').modal('show');
-          return;
-        }
+        if (json.code === 'CONDUCTOR_SANCIONADO') { $('#modalSancionado').modal('show'); return; }
+        if (json.code === 'CONDUCTOR_RETIRADO')   { $('#modalRetirado').modal('show'); return; }
+        if (json.code === 'CONDUCTOR_EVADIDO')    { $('#modalEvadido').modal('show'); return; }
 
         document.getElementById('msgErrorEstado').textContent = json.message || 'No se pudo actualizar tu estado.';
         $('#modalErrorEstado').modal('show');
@@ -383,16 +412,17 @@
       console.error(e);
     }finally{
       saving.style.display = 'none';
-      // si quedó bloqueado, renderUI lo deshabilita
       toggleBtn.disabled = false;
     }
   }
 
-  // Si está bloqueado, al click (por si algún navegador no respeta disabled), mostramos modal
+  // Click botón
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
+      // Estados bloqueados => mostrar modal correspondiente
       if (estadoActual === 3) { $('#modalSancionado').modal('show'); return; }
       if (estadoActual === 4) { $('#modalRetirado').modal('show'); return; }
+      if (estadoActual === 5) { $('#modalEvadido').modal('show'); return; }
 
       const activo = (estadoActual === 1);
       nextEstado = activo ? 2 : 1;

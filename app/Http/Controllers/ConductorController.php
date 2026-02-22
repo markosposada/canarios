@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Conductor;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class ConductorController extends Controller
 {
@@ -124,6 +125,8 @@ public function actualizarLicencia(Request $request)
         'nombres'         => 'required|string|max:255',
         'licencia'        => 'required|string|max:50',
         'fecha'           => 'required|date',
+        // ✅ password opcional pero confirmado
+        'password'        => 'nullable|string|min:6|confirmed',
     ]);
 
     $old = (int) $request->cedula_original;
@@ -135,6 +138,10 @@ public function actualizarLicencia(Request $request)
         if (!$conductor) {
             return back()->with('error', 'Conductor no encontrado.');
         }
+
+        // Para users (cedula es varchar)
+        $oldUserCedula = (string)$old;
+        $newUserCedula = (string)$new;
 
         // si cambió la cédula
         if ($new !== $old) {
@@ -160,21 +167,35 @@ public function actualizarLicencia(Request $request)
 
             // ✅ users (es varchar)
             DB::table('users')
-                ->where('cedula', (string)$old)
-                ->update(['cedula' => (string)$new]);
+                ->where('cedula', $oldUserCedula)
+                ->update(['cedula' => $newUserCedula]);
 
-            // ✅ ahora sí, cambia la PK del conductor
-            // (movil se actualizará SOLO por ON UPDATE CASCADE)
+            // ✅ cambia PK conductor
             $conductor->conduc_cc = $new;
         }
 
-        // actualiza licencia/datos
+        // actualiza datos del conductor
         $conductor->conduc_nombres  = $request->nombres;
         $conductor->conduc_licencia = $request->licencia;
         $conductor->conduc_fecha    = $request->fecha;
         $conductor->save();
 
-        return back()->with('success', 'Licencia actualizada correctamente.');
+        // ✅ si mandaron password, actualizar en users
+        if ($request->filled('password')) {
+            $affected = DB::table('users')
+                ->where('cedula', $newUserCedula) // ya es la nueva si cambiaste
+                ->update([
+                    'password' => Hash::make($request->password),
+                    'updated_at' => now(),
+                ]);
+
+            if ($affected === 0) {
+                // Si no existe usuario, te aviso (o si prefieres lo creamos)
+                return back()->with('error', 'Se actualizó el conductor, pero NO existe usuario en users para esa cédula (no se pudo cambiar la contraseña).');
+            }
+        }
+
+        return back()->with('success', 'Conductor actualizado correctamente.');
     });
 }
 
