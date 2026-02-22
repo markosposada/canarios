@@ -15,3 +15,8 @@ Schedule::command('canarios:auto-facturar --days=3')
     ->dailyAt('02:00')
     ->timezone('America/Bogota')
     ->withoutOverlapping();
+
+Schedule::command('canarios:levantar-sanciones')
+    ->everyThirtyMinutes()
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();

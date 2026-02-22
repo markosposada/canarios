@@ -23,7 +23,14 @@ class Kernel extends ConsoleKernel
             ->dailyAt('02:00')
             ->timezone('America/Bogota')
             ->withoutOverlapping();
+        
+        $schedule->command('canarios:levantar-sanciones')
+    ->everyThirtyMinutes()
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();
     }
+
+    
 
     /**
      * Carga automática de comandos

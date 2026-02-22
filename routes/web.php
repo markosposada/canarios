@@ -259,6 +259,9 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
     Route::get('/facturas-pendientes/listar', [\App\Http\Controllers\Operadora\RecaudoController::class, 'pendientesGlobal'])
         ->name('operadora.facturas_pendientes.listar');
 
+    Route::get('/operadora/factura/{id}/detalle', [\App\Http\Controllers\Operadora\RecaudoController::class, 'detalleFactura'])
+    ->name('operadora.recaudado.factura_detalle');
+
     // ESTADO CONDUCTOR (operadora)
     Route::get('/operadora/estado-conductor', [EstadoConductorControllerOperadora::class, 'index'])
         ->name('operadora.estado_conductor.index');

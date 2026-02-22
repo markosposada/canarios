@@ -301,5 +301,98 @@ public function vistaPendientesGlobal()
     return view('operadora.facturas_pendientes');
 }
 
+//detalle de facturas
+public function detalleFactura($id)
+{
+    $foId = (int) $id;
+    if ($foId <= 0) {
+        return response()->json(['ok' => false, 'message' => 'Factura inválida'], 422);
+    }
+
+    // Cabecera
+    $fo = DB::table('facturacion_operadora')
+        ->where('fo_id', $foId)
+        ->first();
+
+    if (!$fo) {
+        return response()->json(['ok' => false, 'message' => 'Factura no encontrada'], 404);
+    }
+
+    // Detalles (SERVICIO / SANCION)
+    $det = DB::table('facturacion_operadora_det')
+        ->where('fo_id', $foId)
+        ->orderBy('fod_tipo')
+        ->orderBy('fod_id')
+        ->get();
+
+    // IDs por tipo
+    $servIds = $det->where('fod_tipo', 'SERVICIO')->pluck('fod_ref_id')->unique()->values();
+    $sancIds = $det->where('fod_tipo', 'SANCION')->pluck('fod_ref_id')->unique()->values();
+
+    // Traer info de SERVICIOS (disponibles)
+    $servicios = collect();
+    if ($servIds->count() > 0) {
+        $servicios = DB::table('disponibles')
+            ->whereIn('dis_id', $servIds->toArray())
+            ->select('dis_id','dis_fecha','dis_hora','dis_dire')
+            ->get()
+            ->keyBy('dis_id');
+    }
+
+    // Traer info de SANCIONES
+    $sanciones = collect();
+    if ($sancIds->count() > 0) {
+        $sanciones = DB::table('sancion as s')
+            ->leftJoin('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
+            ->whereIn('s.sancion_id', $sancIds->toArray())
+            ->select('s.sancion_id','s.sancion_fecha','s.sancion_hora','s.sancion_tipo','t.tpsa_sancion','t.tpsa_valor')
+            ->get()
+            ->keyBy('sancion_id');
+    }
+
+    // Armar detalle final en 2 listas
+    $outServicios = [];
+    $outSanciones = [];
+
+    foreach ($det as $d) {
+        if ($d->fod_tipo === 'SERVICIO') {
+            $x = $servicios->get($d->fod_ref_id);
+            $outServicios[] = [
+                'id' => (int)$d->fod_ref_id,
+                'fecha' => $x->dis_fecha ?? null,
+                'hora' => $x->dis_hora ?? null,
+                'direccion' => $x->dis_dire ?? null,
+                'valor' => (int)$d->fod_valor,
+            ];
+        } else {
+            $x = $sanciones->get($d->fod_ref_id);
+            $outSanciones[] = [
+                'id' => (int)$d->fod_ref_id,
+                'fecha' => $x->sancion_fecha ?? null,
+                'hora' => $x->sancion_hora ?? null,
+                'tipo' => $x->tpsa_sancion ?? ('Tipo #' . ($x->sancion_tipo ?? '—')),
+                'valor' => (int)$d->fod_valor,
+            ];
+        }
+    }
+
+    return response()->json([
+        'ok' => true,
+        'factura' => [
+            'fo_id' => $fo->fo_id,
+            'fo_movil' => $fo->fo_movil,
+            'fo_conductor' => $fo->fo_conductor,
+            'fo_fecha' => $fo->fo_fecha,
+            'fo_hora' => $fo->fo_hora,
+            'fo_total_servicios' => (int)$fo->fo_total_servicios,
+            'fo_total_sanciones' => (int)$fo->fo_total_sanciones,
+            'fo_total' => (int)$fo->fo_total,
+        ],
+        'servicios' => $outServicios,
+        'sanciones' => $outSanciones,
+    ]);
+}
+
+
 
 }
