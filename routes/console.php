@@ -10,3 +10,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('audios:purge --hours=48')
     ->dailyAt('03:00');
+
+Schedule::command('canarios:auto-facturar --days=3')
+    ->dailyAt('02:00')
+    ->timezone('America/Bogota')
+    ->withoutOverlapping();
