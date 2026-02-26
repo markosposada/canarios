@@ -112,6 +112,9 @@ Route::get('/taxistas/crear', [TaxistaController::class, 'create'])->name('taxis
 Route::post('/taxistas', [TaxistaController::class, 'store'])->name('taxistas.store');
 Route::get('/taxistas/guardado', fn () => view('taxistas.success'))->name('taxistas.success');
 
+Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsulta'])
+    ->name('servicios.consulta.vista');
+
 // Crear taxi (si esto debe ser SOLO operadora, muévelo al grupo de operadora)
 Route::get('/taxis/crear', [TaxiController::class, 'create'])->name('taxis.create');
 Route::post('/taxis', [TaxiController::class, 'store'])->name('taxis.store');
@@ -183,7 +186,7 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
     Route::get('/servicios/moviles', [AsignaServicioController::class, 'movilesActivos'])->name('servicios.moviles');
     Route::post('/servicios/registrar', [AsignaServicioController::class, 'registrar'])->name('servicios.registrar');
 
-    Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsulta'])->name('servicios.consulta.vista');
+    //Route::get('/servicios/consulta', [AsignaServicioController::class, 'vistaConsulta'])->name('servicios.consulta.vista');
 
     Route::get('/servicios/listado', [AsignaServicioController::class, 'listadoVista'])
         ->name('servicios.listado.vista');
