@@ -201,57 +201,76 @@ class RecaudoController extends Controller
      * Pagar una o varias facturas
      */
     public function pagar(Request $request)
-    {
-        $request->validate([
-            'facturas' => 'required|array|min:1',
-            'facturas.*' => 'integer|min:1',
-            'metodo' => 'nullable|string|max:50',
-            'observacion' => 'nullable|string|max:255',
-        ]);
+{
+    $request->validate([
+        'facturas' => 'required|array|min:1',
+        'facturas.*' => 'integer|min:1',
+        'metodo' => 'nullable|string|max:50',
+        'observacion' => 'nullable|string|max:255',
+    ]);
 
-        $ids = array_values(array_unique($request->facturas));
-        $metodo = $request->input('metodo', 'EFECTIVO');
-        $observacion = $request->input('observacion', null);
+    $ids = array_values(array_unique($request->facturas));
+    $metodo = $request->input('metodo', 'EFECTIVO');
+    $observacion = $request->input('observacion', null);
 
-        $now = Carbon::now('America/Bogota');
-        $operadora = Auth::user()->name ?? Auth::user()->email ?? 'OPERADORA';
+    $now = Carbon::now('America/Bogota');
+    $operadora = Auth::user()->name ?? Auth::user()->email ?? 'OPERADORA';
 
-        return DB::transaction(function () use ($ids, $metodo, $observacion, $now, $operadora) {
+    return DB::transaction(function () use ($ids, $metodo, $observacion, $now, $operadora) {
 
-            $rows = DB::table('facturacion_operadora')
-                ->whereIn('fo_id', $ids)
-                ->lockForUpdate()
-                ->get();
+        $rows = DB::table('facturacion_operadora')
+            ->whereIn('fo_id', $ids)
+            ->lockForUpdate()
+            ->get();
 
-            if ($rows->count() === 0) {
-                return response()->json(['ok' => false, 'message' => 'No se encontraron facturas.'], 404);
-            }
+        if ($rows->count() === 0) {
+            return response()->json(['ok' => false, 'message' => 'No se encontraron facturas.'], 404);
+        }
 
-            $pendientes = $rows->where('fo_pagado', 0)->pluck('fo_id')->values();
+        $pendientes = $rows->where('fo_pagado', 0)->pluck('fo_id')->values();
 
-            if ($pendientes->count() === 0) {
-                return response()->json(['ok' => false, 'message' => 'Esas facturas ya estaban pagadas.'], 422);
-            }
+        if ($pendientes->count() === 0) {
+            return response()->json(['ok' => false, 'message' => 'Esas facturas ya estaban pagadas.'], 422);
+        }
 
-            $total = (int) $rows->whereIn('fo_id', $pendientes)->sum('fo_total');
+        $total = (int) $rows->whereIn('fo_id', $pendientes)->sum('fo_total');
 
-            DB::table('facturacion_operadora')
-                ->whereIn('fo_id', $pendientes->toArray())
-                ->update([
-                    'fo_pagado' => 1,
-                    'fo_pagado_at' => $now->format('Y-m-d H:i:s'),
-                    'fo_pagado_operadora' => $operadora,
-                    'fo_metodo' => $metodo,
-                    'fo_observacion' => $observacion,
-                ]);
-
-            return response()->json([
-                'ok' => true,
-                'pagadas' => $pendientes,
-                'total_pagado' => $total,
+        // 1) Marcar como pagadas
+        DB::table('facturacion_operadora')
+            ->whereIn('fo_id', $pendientes->toArray())
+            ->update([
+                'fo_pagado' => 1,
+                'fo_pagado_at' => $now->format('Y-m-d H:i:s'),
+                'fo_pagado_operadora' => $operadora,
+                'fo_metodo' => $metodo,
+                'fo_observacion' => $observacion,
             ]);
-        });
-    }
+
+        // 2) Activar conductor(es) de esas facturas si su estado está en 2,3 o 5
+        $cedulas = DB::table('facturacion_operadora')
+            ->whereIn('fo_id', $pendientes->toArray())
+            ->pluck('fo_conductor')   // <-- aquí está la cédula
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($cedulas->count() > 0) {
+            DB::table('conductores')
+                ->whereIn('conduc_cc', $cedulas->toArray())
+                ->whereIn('conduc_estado', [2, 3, 5])
+                ->update([
+                    'conduc_estado' => 1,
+                ]);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'pagadas' => $pendientes,
+            'total_pagado' => $total,
+            'conductores_activados' => $cedulas,
+        ]);
+    });
+}
     public function pendientesGlobal(Request $request)
 {
     $q = trim($request->query('q', ''));
