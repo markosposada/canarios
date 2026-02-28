@@ -2,11 +2,9 @@
 
 @section('content')
 <style>
-  /* Puedes mover esto al layout */
   .page-wrap{ max-width: 1100px; }
   .page-title{ font-weight: 800; letter-spacing: .2px; }
 
-  /* Cards en móvil */
   .svc-card{
     border: 0;
     border-radius: 14px;
@@ -22,7 +20,6 @@
   .svc-v{ font-size: 14px; font-weight: 600; text-align: right; flex: 1 1 auto; word-break: break-word; }
   .svc-v.text-left{ text-align:left; font-weight: 500; }
 
-  /* Tabla en desktop */
   .table thead th{ white-space: nowrap; }
   .table td{ vertical-align: middle; }
   .token-pill{
@@ -30,7 +27,6 @@
     background: rgba(0,0,0,.06); font-weight: 800; letter-spacing: .5px;
   }
 
-  /* Filtros compactos en móvil */
   @media (max-width: 576px){
     .card-body{ padding: 12px; }
     .btn-action{ padding: .55rem .9rem; }
@@ -42,7 +38,6 @@
     <h2 class="mb-0 page-title">Servicios registrados</h2>
   </div>
 
-  {{-- Filtros --}}
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
       <div class="row g-2">
@@ -68,10 +63,8 @@
     </div>
   </div>
 
-  {{-- ✅ Vista móvil/tablet: CARDS (se muestra en < lg) --}}
   <div id="listaCards" class="d-lg-none"></div>
 
-  {{-- ✅ Vista desktop: TABLA (se muestra en >= lg) --}}
   <div class="table-responsive d-none d-lg-block">
     <table class="table table-hover align-middle text-center" id="tablaServicios">
       <thead class="table-dark">
@@ -93,7 +86,6 @@
   </div>
 </div>
 
-{{-- Libs --}}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -105,9 +97,15 @@ function badgeEstado(estado) {
   return '<span class="badge bg-success">Activo</span>';
 }
 
+/**
+ * ✅ Acción:
+ * - si está cancelado => botón ACTIVAR
+ * - si está activo y dentro de 1 hora => botón CANCELAR
+ * - si está activo pero venció => No disponible
+ */
 function botonAccion(id, estado, puede_cancelar) {
   if (Number(estado) === 2) {
-    return '<button class="btn btn-sm btn-outline-secondary" disabled>—</button>';
+    return `<button class="btn btn-sm btn-success" onclick="activar(${id})">Activar</button>`;
   }
   if (Number(puede_cancelar) === 0) {
     return '<button class="btn btn-sm btn-outline-secondary" disabled title="Tiempo de cancelación vencido">No disponible</button>';
@@ -117,9 +115,6 @@ function botonAccion(id, estado, puede_cancelar) {
 
 function esc(v){ return (v ?? '').toString(); }
 
-/* =========================
-   Pintar DESKTOP (tabla)
-   ========================= */
 function pintarTabla(rows) {
   const $tb = $('#tablaServicios tbody').empty();
 
@@ -146,9 +141,6 @@ function pintarTabla(rows) {
   });
 }
 
-/* =========================
-   Pintar MÓVIL (cards)
-   ========================= */
 function pintarCards(rows){
   const $wrap = $('#listaCards').empty();
 
@@ -209,9 +201,6 @@ function pintarCards(rows){
   });
 }
 
-/* =========================
-   Cargar data
-   ========================= */
 async function cargarTabla() {
   const params = new URLSearchParams();
   const d = $('#fDesde').val();
@@ -222,7 +211,6 @@ async function cargarTabla() {
   if (h) params.append('hasta', h);
   if (q) params.append('q', q);
 
-  // loaders
   $('#tablaServicios tbody').html('<tr><td colspan="10" class="text-muted">Cargando...</td></tr>');
   $('#listaCards').html(`
     <div class="card svc-card">
@@ -235,7 +223,6 @@ async function cargarTabla() {
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     });
 
-    // si devuelve HTML/login, esto evita que reviente sin mensaje
     const ct = res.headers.get('content-type') || '';
     if (!ct.includes('application/json')) {
       const raw = await res.text();
@@ -304,12 +291,64 @@ async function cancelar(id) {
   }
 }
 
+/** ✅ NUEVO: activar servicio cancelado */
+async function activar(id) {
+  const ok = await Swal.fire({
+    icon: 'question',
+    title: 'Activar servicio',
+    text: '¿Deseas reactivar este servicio?',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, activar',
+    cancelButtonText: 'No',
+  }).then(r => r.isConfirmed);
+
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`{{ url('/servicios/activar') }}/${id}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      const raw = await res.text();
+      console.error('Respuesta NO JSON:', raw.slice(0, 400));
+      throw new Error('El servidor no devolvió JSON.');
+    }
+
+    const data = await res.json();
+
+    if (data.success) {
+      Swal.fire('Listo', 'Servicio activado de nuevo.', 'success');
+      cargarTabla();
+    } else {
+      Swal.fire('Sin cambios', 'No fue posible activar (¿ya estaba activo?).', 'info');
+    }
+  } catch (e) {
+    console.error(e);
+    Swal.fire('Error', 'No se pudo activar el servicio.', 'error');
+  }
+}
+
 $('#btnBuscar').on('click', cargarTabla);
 $('#fQuery').on('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cargarTabla(); } });
 
-// Fechas por defecto: hoy
+/** ✅ Fecha de hoy en hora LOCAL (evita el +1 día por UTC) */
+function hoyLocalYYYYMMDD() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = hoyLocalYYYYMMDD();
   $('#fDesde').val(hoy);
   $('#fHasta').val(hoy);
   cargarTabla();

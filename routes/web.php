@@ -196,6 +196,13 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
 
     Route::post('/servicios/cancelar/{id}', [AsignaServicioController::class, 'cancelarServicio'])
         ->name('servicios.cancelar');
+    
+    Route::post('/servicios/activar/{id}', [AsignaServicioController::class, 'activarServicio'])
+        ->name('servicios.activar');
+    
+        
+    
+    
 
     Route::post('/servicios/audio', [AsignaServicioController::class, 'subirAudio'])
         ->name('servicios.audio');
