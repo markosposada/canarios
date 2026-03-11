@@ -14,7 +14,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <!-- Tu CSS (si lo usas) -->
-  <link href="{{ asset('css/style.css') }}" rel="stylesheet">
+  <!--<link href="{{ asset('css/style.css') }}" rel="stylesheet">-->
 
     <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#0d6efd">
@@ -104,7 +104,7 @@
         <div class="card-body p-4 p-sm-4">
           <div class="text-center mb-3">
             <h3 class="auth-title">Iniciar sesión</h3>
-            <p class="text-muted mb-0" style="font-size: .95rem;">Accede con tu correo y contraseña</p>
+            <p class="text-muted mb-0" style="font-size: .95rem;">Accede con tu cedula y contraseña</p>
           </div>
 
 

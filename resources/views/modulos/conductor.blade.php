@@ -337,6 +337,24 @@
     </a>
   </div>
 
+
+  
+  <button onclick="verPush()">Ver estado push</button>
+
+<script>
+async function verPush(){
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+
+  alert(
+    "Permiso: " + Notification.permission +
+    "\nSuscripción: " + (sub ? "SI" : "NO") +
+    "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
+  );
+}
+</script>
+
+
   {{-- ... el resto de tus tarjetas igual ... --}}
 
 </div>
