@@ -12,7 +12,7 @@
         {{-- Nombres --}}
         <div class="mb-3">
             <label for="nombres" class="form-label">Nombres</label>
-            <input type="text" name="nombres" class="form-control" value="{{ old('nombres') }}" required autofocus>
+            <input type="text" name="nombres" class="form-control" autocomplete="off" value="{{ old('nombres') }}" required autofocus>
             @error('nombres')
                 <small class="text-danger">{{ $message }}</small>
             @enderror
@@ -21,7 +21,7 @@
         {{-- Apellidos --}}
         <div class="mb-3">
             <label for="apellidos" class="form-label">Apellidos</label>
-            <input type="text" name="apellidos" class="form-control" value="{{ old('apellidos') }}" required>
+            <input type="text" name="apellidos" class="form-control" autocomplete="off" value="{{ old('apellidos') }}" required>
             @error('apellidos')
                 <small class="text-danger">{{ $message }}</small>
             @enderror
@@ -30,7 +30,7 @@
         {{-- Cédula --}}
         <div class="mb-3">
             <label for="cedula" class="form-label">Cédula</label>
-            <input type="text" name="cedula" class="form-control" value="{{ old('cedula') }}" required>
+            <input type="text" name="cedula" class="form-control" autocomplete="off" value="{{ old('cedula') }}" required>
             @error('cedula')
                 <small class="text-danger">{{ $message }}</small>
             @enderror
@@ -39,7 +39,7 @@
         {{-- Celular --}}
         <div class="mb-3">
             <label for="celular" class="form-label">Celular</label>
-            <input type="text" name="celular" class="form-control" value="{{ old('celular') }}" required>
+            <input type="text" name="celular" class="form-control" autocomplete="off" value="{{ old('celular') }}" required>
             @error('celular')
                 <small class="text-danger">{{ $message }}</small>
             @enderror
@@ -48,7 +48,7 @@
         {{-- Email --}}
         <div class="mb-3">
             <label for="email" class="form-label">Correo electrónico</label>
-            <input type="email" name="email" class="form-control" value="{{ old('email') }}" required>
+            <input type="email" name="email" class="form-control" autocomplete="new-email" value="{{ old('email') }}" required>
             @error('email')
                 <small class="text-danger">{{ $message }}</small>
             @enderror

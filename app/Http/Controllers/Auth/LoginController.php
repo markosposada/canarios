@@ -9,14 +9,13 @@ use Illuminate\Support\Facades\Auth;
 class LoginController extends Controller
 {
     public function showLoginForm()
-{
-    if (auth()->check()) {
-        return redirect($this->redirectTo());
+    {
+        if (auth()->check()) {
+            return redirect($this->redirectTo());
+        }
+
+        return view('auth.login');
     }
-
-    return view('auth.login');
-}
-
 
     public function login(Request $request)
     {
@@ -25,22 +24,22 @@ class LoginController extends Controller
             'password' => ['required'],
         ]);
 
-        // ✅ aquí se define
         $remember = $request->boolean('remember');
 
-        // ✅ fuerza el guard web y usa remember
         if (Auth::guard('web')->attempt([
             'cedula'   => $credentials['cedula'],
             'password' => $credentials['password'],
-            
         ], $remember)) {
 
             $request->session()->regenerate();
-            //dd('LOGUEADO', Auth::check(), Auth::user()->rol, $this->redirectTo());
 
+            $user = Auth::user();
+
+            if ($this->debeElegirModo($user)) {
+                return redirect()->route('seleccionar.acceso');
+            }
 
             return redirect($this->redirectTo());
-
         }
 
         return back()
@@ -50,6 +49,8 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        session()->forget('modo_ingreso');
+
         Auth::logout();
 
         $request->session()->invalidate();
@@ -58,16 +59,56 @@ class LoginController extends Controller
         return redirect('/login');
     }
 
-  protected function redirectTo()
-{
-    $rol = strtolower(trim(Auth::user()->rol ?? ''));
+    public function seleccionarAcceso()
+    {
+        $user = Auth::user();
 
-    return match ($rol) {
-        'administrador', 'operadora' => '/dashboard',
-        'conductor' => '/modulo-conductor',
-        'propietario taxi' => '/modulo-propietario',
-        default => '/login',
-    };
-}
+        if (!$this->debeElegirModo($user)) {
+            return redirect($this->redirectTo());
+        }
 
+        return view('auth.seleccionar-acceso');
+    }
+
+    public function guardarAcceso(Request $request)
+    {
+        $request->validate([
+            'modo_ingreso' => ['required', 'in:administrador,conductor'],
+        ]);
+
+        $user = Auth::user();
+
+        if (!$this->debeElegirModo($user)) {
+            return redirect($this->redirectTo());
+        }
+
+        session(['modo_ingreso' => $request->modo_ingreso]);
+
+        return redirect($this->redirectTo());
+    }
+
+    protected function redirectTo()
+    {
+        $user = Auth::user();
+        $rol = strtolower(trim($user->rol ?? ''));
+        $modoIngreso = session('modo_ingreso');
+
+        if ($modoIngreso === 'conductor') {
+            return '/modulo-conductor';
+        }
+
+        return match ($rol) {
+            'administrador', 'operadora' => '/dashboard',
+            'conductor' => '/modulo-conductor',
+            'propietario taxi' => '/modulo-propietario',
+            default => '/login',
+        };
+    }
+
+    protected function debeElegirModo($user): bool
+    {
+        $rol = strtolower(trim($user->rol ?? ''));
+
+        return $rol === 'administrador';
+    }
 }

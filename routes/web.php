@@ -73,12 +73,16 @@ Route::middleware([NoCache::class])->group(function () {
         ->middleware('guest')
         ->name('login.post');
 
-    Route::post('/logout', function () {
-        Auth::logout();
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
-        return redirect('/login');
-    })->name('logout');
+    Route::get('/seleccionar-acceso', [LoginController::class, 'seleccionarAcceso'])
+    ->middleware('auth')
+    ->name('seleccionar.acceso');
+
+    Route::post('/seleccionar-acceso', [LoginController::class, 'guardarAcceso'])
+    ->middleware('auth')
+    ->name('guardar.acceso');
+
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    
 
 });
 
@@ -137,7 +141,7 @@ Route::get('/dashboard', fn () => view('dashboard'))
     ->name('dashboard');
 
 Route::get('/modulo-conductor', fn () => view('modulos.conductor'))
-    ->middleware(['auth', RolMiddleware::class . ':conductor'])
+    ->middleware(['auth'])
     ->name('modulo.conductor');
 
 Route::get('/modulo-operadora', fn () => view('modulos.operadora'))
