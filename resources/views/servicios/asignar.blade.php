@@ -94,8 +94,7 @@
                     <input type="text"
                            id="inpDireccion"
                            class="form-control"
-                           placeholder="Calle, No, etc."
-                           autocomplete="street-address"
+                           placeholder="Calle, No, etc."                           
                            inputmode="text">
 
                     <button type="button"
