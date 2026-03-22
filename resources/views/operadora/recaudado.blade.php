@@ -51,7 +51,7 @@
   <div class="col-lg-4 grid-margin stretch-card">
     <div class="card">
       <div class="card-body">
-        <h4 class="card-title mb-3">Seleccionar conductor</h4>
+        <h4 class="card-title mb-3">Seleccionar movil</h4>
 
         <button class="btn btn-primary w-100" id="btnModalConductor" type="button">
           <i class="mdi mdi-account-search mr-1"></i> Buscar conductor
@@ -140,12 +140,12 @@
     <div class="modal-head">
       <div>
         <strong>Buscar conductor</strong><br>
-        <span class="small-muted">Escribe nombre o cédula</span>
+        <span class="small-muted">Escribe numero del movil</span>
       </div>
       <button class="btn btn-sm btn-light" id="btnCerrarModal" type="button">✕</button>
     </div>
     <div class="modal-body">
-      <input type="text" class="form-control" id="buscadorConductor" placeholder="Ej: ADAN o 9090">
+      <input type="text" class="form-control" id="buscadorConductor" placeholder="Ej: 1">
       <div class="small-muted mt-2">Resultados:</div>
       <div id="resultados" class="mt-2"></div>
       <div class="small-muted mt-2">
@@ -502,10 +502,10 @@ document.addEventListener('DOMContentLoaded', function(){
   buscadorConductor.addEventListener('input', function(){
     clearTimeout(tmr);
     const q = buscadorConductor.value.trim();
-    if(q.length < 2){
-      resultados.innerHTML = `<div class="small-muted">Escribe al menos 2 caracteres...</div>`;
-      return;
-    }
+   if(q.length === 0){
+  resultados.innerHTML = '';
+  return;
+}
 
     resultados.innerHTML = `<div class="small-muted">Buscando...</div>`;
 

@@ -86,34 +86,108 @@
   </div>
 </div>
 
+<!-- Modal Modificar Servicio -->
+<div class="modal fade" id="modalModificarServicio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title">Modificar servicio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modServicioId">
+        <input type="hidden" id="modEstadoActual">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">¿Qué deseas hacer?</label>
+          <select id="modAccion" class="form-select">
+            <option value="">Seleccione una opción</option>
+            <option value="cancelar">Cancelar servicio</option>
+            <option value="cambiar_movil">Cambiar móvil</option>
+          </select>
+        </div>
+
+        <div id="bloqueCancelar" style="display:none;">
+          <div class="alert alert-warning mb-0">
+            Esta acción cancelará el servicio actual.
+          </div>
+        </div>
+
+        <div id="bloqueMoviles" style="display:none;">
+          <div class="row g-2 mb-3">
+            <div class="col-md-7">
+              <label class="form-label">Buscar móvil</label>
+              <input type="text" id="buscarMovilModal" class="form-control" placeholder="Escribe número del móvil">
+            </div>
+            <div class="col-md-5 d-flex align-items-end">
+              <button type="button" class="btn btn-dark w-100" id="btnBuscarMovilModal">Buscar</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle text-center">
+              <thead class="table-dark">
+                <tr>
+                  <th>Móvil</th>
+                  <th>Placa</th>
+                  <th class="text-start">Conductor</th>
+                  <th>Servicios</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tablaMovilesModal">
+                <tr>
+                  <td colspan="5" class="text-muted">Seleccione "Cambiar móvil" para cargar opciones.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCerrarModalModificar">Cerrar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmarCancelar" style="display:none;">
+          Confirmar cancelación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
 $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
 
+let modalModificarServicio = null;
+
+function esc(v){ return (v ?? '').toString(); }
+
 function badgeEstado(estado) {
   if (Number(estado) === 2) return '<span class="badge bg-danger">Cancelado</span>';
   return '<span class="badge bg-success">Activo</span>';
 }
 
+$('#btnCerrarModalModificar').on('click', function () {
+  if (modalModificarServicio) {
+    modalModificarServicio.hide();
+  }
+});
+
 /**
- * ✅ Acción:
- * - si está cancelado => botón ACTIVAR
- * - si está activo y dentro de 1 hora => botón CANCELAR
- * - si está activo pero venció => No disponible
+ * Acción:
+ * - si venció tiempo => No disponible
+ * - si no venció => Modificar
  */
 function botonAccion(id, estado, puede_cancelar) {
-  if (Number(estado) === 2) {
-    return `<button class="btn btn-sm btn-success" onclick="activar(${id})">Activar</button>`;
-  }
   if (Number(puede_cancelar) === 0) {
-    return '<button class="btn btn-sm btn-outline-secondary" disabled title="Tiempo de cancelación vencido">No disponible</button>';
+    return '<button class="btn btn-sm btn-outline-secondary" disabled title="Tiempo de modificación vencido">No disponible</button>';
   }
-  return `<button class="btn btn-sm btn-danger" onclick="cancelar(${id})">Cancelar</button>`;
-}
 
-function esc(v){ return (v ?? '').toString(); }
+  return `<button class="btn btn-sm btn-primary" onclick="abrirModificar(${id}, ${estado})">Modificar</button>`;
+}
 
 function pintarTabla(rows) {
   const $tb = $('#tablaServicios tbody').empty();
@@ -248,7 +322,48 @@ async function cargarTabla() {
   }
 }
 
-async function cancelar(id) {
+function abrirModificar(id, estado) {
+  $('#modServicioId').val(id);
+  $('#modEstadoActual').val(estado);
+  $('#modAccion').val('');
+  $('#bloqueMoviles').hide();
+  $('#bloqueCancelar').hide();
+  $('#btnConfirmarCancelar').hide();
+  $('#buscarMovilModal').val('');
+  $('#tablaMovilesModal').html(`
+    <tr>
+      <td colspan="5" class="text-muted">Seleccione "Cambiar móvil" para cargar opciones.</td>
+    </tr>
+  `);
+
+  if (!modalModificarServicio) {
+    modalModificarServicio = new bootstrap.Modal(document.getElementById('modalModificarServicio'));
+  }
+
+  modalModificarServicio.show();
+}
+
+$('#modAccion').on('change', function () {
+  const accion = $(this).val();
+
+  $('#bloqueMoviles').hide();
+  $('#bloqueCancelar').hide();
+  $('#btnConfirmarCancelar').hide();
+
+  if (accion === 'cancelar') {
+    $('#bloqueCancelar').show();
+    $('#btnConfirmarCancelar').show();
+  }
+
+  if (accion === 'cambiar_movil') {
+    $('#bloqueMoviles').show();
+    cargarMovilesModal();
+  }
+});
+
+$('#btnConfirmarCancelar').on('click', async function () {
+  const id = $('#modServicioId').val();
+
   const ok = await Swal.fire({
     icon: 'warning',
     title: 'Cancelar servicio',
@@ -280,35 +395,33 @@ async function cancelar(id) {
     const data = await res.json();
 
     if (data.success) {
-      Swal.fire('Listo', 'Servicio cancelado.', 'success');
+      modalModificarServicio.hide();
+      Swal.fire('Listo', data.message || 'Servicio cancelado.', 'success');
       cargarTabla();
     } else {
-      Swal.fire('Sin cambios', 'No fue posible cancelar (¿ya estaba cancelado o vencido?).', 'info');
+      Swal.fire('Sin cambios', data.message || 'No fue posible cancelar.', 'info');
     }
   } catch (e) {
     console.error(e);
     Swal.fire('Error', 'No se pudo cancelar el servicio.', 'error');
   }
-}
+});
 
-/** ✅ NUEVO: activar servicio cancelado */
-async function activar(id) {
-  const ok = await Swal.fire({
-    icon: 'question',
-    title: 'Activar servicio',
-    text: '¿Deseas reactivar este servicio?',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, activar',
-    cancelButtonText: 'No',
-  }).then(r => r.isConfirmed);
+async function cargarMovilesModal() {
+  const q = $('#buscarMovilModal').val().trim();
+  const params = new URLSearchParams();
 
-  if (!ok) return;
+  if (q) params.append('q', q);
+
+  $('#tablaMovilesModal').html(`
+    <tr>
+      <td colspan="5" class="text-muted">Cargando móviles...</td>
+    </tr>
+  `);
 
   try {
-    const res = await fetch(`{{ url('/servicios/activar') }}/${id}`, {
-      method: 'POST',
+    const res = await fetch(`{{ route('servicios.moviles') }}?${params.toString()}`, {
       headers: {
-        'X-CSRF-TOKEN': '{{ csrf_token() }}',
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest'
       }
@@ -322,23 +435,111 @@ async function activar(id) {
     }
 
     const data = await res.json();
+    const rows = Array.isArray(data) ? data : [];
+
+    if (!rows.length) {
+      $('#tablaMovilesModal').html(`
+        <tr>
+          <td colspan="5" class="text-muted">No se encontraron móviles disponibles.</td>
+        </tr>
+      `);
+      return;
+    }
+
+    let html = '';
+    rows.forEach(r => {
+      html += `
+        <tr>
+          <td>${esc(r.mo_taxi)}</td>
+          <td>${esc(r.placa)}</td>
+          <td class="text-start">${esc(r.nombre_conductor)}</td>
+          <td>${esc(r.cantidad)}</td>
+          <td>
+            <button class="btn btn-sm btn-success" onclick="reasignarMovil(${r.mo_id})">
+              Seleccionar
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    $('#tablaMovilesModal').html(html);
+  } catch (e) {
+    console.error(e);
+    $('#tablaMovilesModal').html(`
+      <tr>
+        <td colspan="5" class="text-danger">Error al cargar móviles.</td>
+      </tr>
+    `);
+  }
+}
+
+$('#btnBuscarMovilModal').on('click', cargarMovilesModal);
+$('#buscarMovilModal').on('keydown', function(e){
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    cargarMovilesModal();
+  }
+});
+
+async function reasignarMovil(nuevoConmo) {
+  const servicioId = $('#modServicioId').val();
+
+  const ok = await Swal.fire({
+    icon: 'question',
+    title: 'Cambiar móvil',
+    text: '¿Deseas asignar este móvil al servicio?',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, cambiar',
+    cancelButtonText: 'No',
+  }).then(r => r.isConfirmed);
+
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`{{ url('/servicios/cambiar-movil') }}/${servicioId}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({
+        nuevo_conmo: nuevoConmo
+      })
+    });
+
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      const raw = await res.text();
+      console.error('Respuesta NO JSON:', raw.slice(0, 400));
+      throw new Error('El servidor no devolvió JSON.');
+    }
+
+    const data = await res.json();
 
     if (data.success) {
-      Swal.fire('Listo', 'Servicio activado de nuevo.', 'success');
+      modalModificarServicio.hide();
+      Swal.fire('Listo', data.message || 'Móvil cambiado correctamente.', 'success');
       cargarTabla();
     } else {
-      Swal.fire('Sin cambios', 'No fue posible activar (¿ya estaba activo?).', 'info');
+      Swal.fire('Sin cambios', data.message || 'No fue posible cambiar el móvil.', 'info');
     }
   } catch (e) {
     console.error(e);
-    Swal.fire('Error', 'No se pudo activar el servicio.', 'error');
+    Swal.fire('Error', 'No se pudo cambiar el móvil.', 'error');
   }
 }
 
 $('#btnBuscar').on('click', cargarTabla);
-$('#fQuery').on('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cargarTabla(); } });
+$('#fQuery').on('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    cargarTabla();
+  }
+});
 
-/** ✅ Fecha de hoy en hora LOCAL (evita el +1 día por UTC) */
 function hoyLocalYYYYMMDD() {
   const d = new Date();
   const yyyy = d.getFullYear();

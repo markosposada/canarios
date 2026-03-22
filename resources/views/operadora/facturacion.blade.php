@@ -47,8 +47,8 @@
         <h4 class="card-title mb-3">Seleccionar conductor</h4>
 
         <button class="btn btn-primary w-100" id="btnModalConductor" type="button">
-          <i class="mdi mdi-account-search mr-1"></i> Buscar conductor
-        </button>
+  <i class="mdi mdi-account-search mr-1"></i> Buscar conductor o móvil
+</button>
 
         <div id="msg" class="mt-3"></div>
 
@@ -156,12 +156,12 @@
     <div class="modal-head">
       <div>
         <strong>Buscar conductor</strong><br>
-        <span class="small-muted">Escribe nombre o cédula</span>
+        <span class="small-muted">Escribe nombre, cédula o número de móvil</span>
       </div>
       <button class="btn btn-sm btn-light" id="btnCerrarModal" type="button">✕</button>
     </div>
     <div class="modal-body">
-      <input type="text" class="form-control" id="buscadorConductor" placeholder="Ej: ADAN o 9090">
+      <input type="text" class="form-control" id="buscadorConductor" placeholder="Ej: 1">
       <div class="small-muted mt-2">Resultados:</div>
       <div id="resultados" class="mt-2"></div>
     </div>
@@ -317,11 +317,8 @@ document.addEventListener('DOMContentLoaded', function(){
   buscadorConductor.addEventListener('input', function(){
     clearTimeout(tmr);
     const q = buscadorConductor.value.trim();
-    if(q.length < 2){
-      resultados.innerHTML = `<div class="small-muted">Escribe al menos 2 caracteres...</div>`;
-      return;
-    }
-    resultados.innerHTML = `<div class="small-muted">Buscando...</div>`;
+    
+    resultados.innerHTML = `<div class="small-muted">Buscando móvil...</div>`;
 
     tmr = setTimeout(() => {
       fetch(urlBuscarCon + '?q=' + encodeURIComponent(q), { headers: {'X-Requested-With':'XMLHttpRequest'} })

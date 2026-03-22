@@ -145,45 +145,38 @@ class FacturacionController extends Controller
      * ✅ Buscar conductores por nombre o cédula (para modal) - SIN exigir móvil activo
      */
     public function buscarConductores(Request $request)
-    {
-        $q = trim($request->query('q', ''));
-        if ($q === '') {
-            return response()->json(['ok' => true, 'data' => []]);
-        }
+{
+    $q = trim($request->query('q', ''));
 
-        $like = "%{$q}%";
-
-        $rows = DB::table('conductores as c')
-            ->leftJoin('movil as m', 'm.mo_conductor', '=', 'c.conduc_cc')
-            ->where(function ($w) use ($like) {
-                $w->where('c.conduc_nombres', 'like', $like)
-                  ->orWhereRaw('CAST(c.conduc_cc AS CHAR) LIKE ?', [$like]);
-            })
-            ->groupBy('c.conduc_cc', 'c.conduc_nombres')
-            ->orderBy('c.conduc_nombres')
-            ->limit(20)
-            ->selectRaw("
-                c.conduc_cc as cedula,
-                c.conduc_nombres as nombre,
-                MAX(m.mo_id) as last_mo_id
-            ")
-            ->get();
-
-        $data = [];
-        foreach ($rows as $r) {
-            $movil = null;
-            if (!empty($r->last_mo_id)) {
-                $movil = DB::table('movil')->where('mo_id', $r->last_mo_id)->value('mo_taxi');
-            }
-            $data[] = [
-                'cedula' => $r->cedula,
-                'nombre' => $r->nombre,
-                'movil'  => $movil ?? '—',
-            ];
-        }
-
-        return response()->json(['ok' => true, 'data' => $data]);
+    if ($q === '') {
+        return response()->json(['ok' => true, 'data' => []]);
     }
+
+    // Solo permitir números (móvil)
+    if (!ctype_digit($q)) {
+        return response()->json([
+            'ok' => false,
+            'data' => [],
+            'message' => 'Ingrese solo números de móvil.'
+        ]);
+    }
+
+    $rows = DB::table('movil as m')
+        ->join('conductores as c', 'c.conduc_cc', '=', 'm.mo_conductor')
+        ->where('m.mo_taxi', (int)$q)
+        ->orderBy('c.conduc_nombres')
+        ->select([
+            'c.conduc_cc as cedula',
+            'c.conduc_nombres as nombre',
+            'm.mo_taxi as movil',
+        ])
+        ->get();
+
+    return response()->json([
+        'ok' => true,
+        'data' => $rows,
+    ]);
+}
 
     /**
      * ✅ Facturar TODO por cédula (sin tocar el insert)

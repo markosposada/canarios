@@ -204,7 +204,8 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
     Route::post('/servicios/activar/{id}', [AsignaServicioController::class, 'activarServicio'])
         ->name('servicios.activar');
     
-        
+    Route::post('/servicios/cambiar-movil/{id}', [AsignaServicioController::class, 'cambiarMovilServicio'])
+    ->name('servicios.cambiarMovil');
     
     
 

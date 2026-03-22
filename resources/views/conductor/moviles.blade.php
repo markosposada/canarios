@@ -36,47 +36,72 @@
           <div class="row">
 
             @foreach($moviles as $m)
-              @php $activo = ((int)$m->mo_estado === 1); @endphp
+              @php
+                $estado = (int) $m->mo_estado;
+                $activo = ($estado === 1);
+                $retirado = ($estado === 3);
+
+                $badgeClass = $activo ? 'badge-success' : ($retirado ? 'badge-secondary' : 'badge-danger');
+                $badgeText  = $activo ? 'ACTIVO' : ($retirado ? 'RETIRADO' : 'INACTIVO');
+
+                $descripcion = $activo
+                  ? 'Este móvil está recibiendo servicios.'
+                  : ($retirado
+                      ? 'Este móvil fue retirado y no puede activarse.'
+                      : 'Este móvil está fuera de servicio.');
+
+                $cardBg = $retirado ? '#f1f3f5' : '#fff';
+                $cardBorder = $retirado ? '1px solid #d1d5db' : '1px solid rgba(0,0,0,.08)';
+                $cardOpacity = $retirado ? '0.75' : '1';
+
+                $btnClass = $activo ? 'btn-danger' : 'btn-success';
+                $btnIcon  = $activo ? 'mdi-power' : 'mdi-power-plug';
+                $btnText  = $activo ? 'Desactivar' : 'Activar';
+              @endphp
 
               <div class="col-md-6 col-lg-4 mb-4">
                 <div class="p-3 border"
-                     style="border-radius:16px; background:#fff; height:100%;">
+                     id="card-{{ $m->mo_id }}"
+                     style="border-radius:16px; background:{{ $cardBg }}; border:{{ $cardBorder }}; opacity:{{ $cardOpacity }}; height:100%;">
 
                   {{-- CABECERA MÓVIL --}}
                   <div class="d-flex align-items-center justify-content-between">
                     <div>
                       <div class="text-muted" style="font-size:13px;">MÓVIL</div>
-                      <div style="font-size:28px;font-weight:800;letter-spacing:.5px;">
+                      <div style="font-size:28px;font-weight:800;letter-spacing:.5px; {{ $retirado ? 'color:#6b7280;' : '' }}">
                         {{ $m->mo_taxi }}
                       </div>
                     </div>
 
                     <div>
-                      <span class="badge badge-pill {{ $activo ? 'badge-success' : 'badge-danger' }}"
+                      <span class="badge badge-pill {{ $badgeClass }}"
                             id="badge-{{ $m->mo_id }}"
+                            data-estado="{{ $estado }}"
                             style="padding:10px 12px; font-size:12px;">
-                        {{ $activo ? 'ACTIVO' : 'INACTIVO' }}
+                        {{ $badgeText }}
                       </span>
                     </div>
                   </div>
 
                   {{-- DESCRIPCIÓN --}}
-                  <div class="mt-3 text-muted" style="font-size:13px;">
-                    {{ $activo
-                      ? 'Este móvil está recibiendo servicios.'
-                      : 'Este móvil está fuera de servicio.' }}
+                  <div class="mt-3 {{ $retirado ? '' : 'text-muted' }}"
+                       style="font-size:13px; {{ $retirado ? 'color:#6b7280;' : '' }}">
+                    {{ $descripcion }}
                   </div>
 
                   {{-- BOTÓN --}}
                   <button
-                    class="btn btn-block mt-3 {{ $activo ? 'btn-danger' : 'btn-success' }}"
+                    class="btn btn-block mt-3 {{ $retirado ? 'btn-secondary' : $btnClass }}"
                     id="btn-{{ $m->mo_id }}"
-                    onclick="toggleMovil({{ $m->mo_id }})"
-                    style="border-radius:14px; padding:12px 14px; font-weight:800;">
+                    @if(!$retirado)
+                      onclick="toggleMovil({{ $m->mo_id }})"
+                    @endif
+                    {{ $retirado ? 'disabled' : '' }}
+                    style="border-radius:14px; padding:12px 14px; font-weight:800; {{ $retirado ? 'cursor:not-allowed; background:#9ca3af; border-color:#9ca3af;' : '' }}">
 
-                    <i class="mdi {{ $activo ? 'mdi-power' : 'mdi-power-plug' }}"></i>
+                    <i class="mdi {{ $retirado ? 'mdi-lock-outline' : $btnIcon }}"></i>
                     <span id="text-{{ $m->mo_id }}">
-                      {{ $activo ? 'Desactivar' : 'Activar' }}
+                      {{ $retirado ? 'No disponible' : $btnText }}
                     </span>
                   </button>
 
@@ -197,11 +222,19 @@
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
 async function toggleMovil(movilId) {
-
   const badge = document.getElementById('badge-' + movilId);
   const btn   = document.getElementById('btn-' + movilId);
   const text  = document.getElementById('text-' + movilId);
   const load  = document.getElementById('load-' + movilId);
+
+  const estadoActual = Number(badge.dataset.estado || 0);
+
+  // bloqueo extra en frontend para retirado
+  if (estadoActual === 3) {
+    document.getElementById('msgErrorMovil').textContent = 'Este móvil está retirado y no puede activarse.';
+    $('#modalErrorMovil').modal('show');
+    return;
+  }
 
   const isActivo = badge.textContent.trim() === 'ACTIVO';
   const accion = isActivo ? 'desactivar' : 'activar';
@@ -223,38 +256,38 @@ async function toggleMovil(movilId) {
     let json = {};
     try { json = await res.json(); } catch (e) { json = {}; }
 
-    // ❌ Si el backend bloquea por reglas (403) o cualquier error
     if (!res.ok || !json.success) {
-
-      // conductor estado 2 -> debe activar estado
       if (json.code === 'CONDUCTOR_INACTIVO') {
         if (json.redirect) document.getElementById('btnIrEstado').href = json.redirect;
         $('#modalConductorInactivo').modal('show');
         return;
       }
 
-      // conductor estado 3 o 4 -> sancionado
       if (json.code === 'CONDUCTOR_SANCIONADO') {
         $('#modalConductorSancionado').modal('show');
         return;
       }
 
-      // otro error
+      if (json.code === 'MOVIL_RETIRADO') {
+        document.getElementById('msgErrorMovil').textContent = json.message || 'Este móvil está retirado y no puede activarse.';
+        $('#modalErrorMovil').modal('show');
+        return;
+      }
+
       document.getElementById('msgErrorMovil').textContent = json.message || '❌ No se pudo cambiar el estado del móvil.';
       $('#modalErrorMovil').modal('show');
       return;
     }
 
-    // ✅ OK
     if (json.accion === 'activar') {
-      // Recargamos para reflejar que los otros se desactivaron
       location.reload();
       return;
     }
 
-    // Si solo se desactivó este
     badge.className = 'badge badge-pill badge-danger';
     badge.textContent = 'INACTIVO';
+    badge.dataset.estado = '2';
+
     btn.className = 'btn btn-block mt-3 btn-success';
     btn.querySelector('i').className = 'mdi mdi-power-plug';
     text.textContent = 'Activar';

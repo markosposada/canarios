@@ -151,51 +151,41 @@ class RecaudoController extends Controller
      * Buscar conductores por nombre o cédula (para modal)
      * ✅ NO requiere mo_estado=1
      */
-    public function buscarConductores(Request $request)
-    {
-        $q = trim($request->query('q', ''));
-        if ($q === '') {
-            return response()->json(['ok' => true, 'data' => []]);
-        }
+ public function buscarConductores(Request $request)
+{
+    $q = trim($request->query('q', ''));
 
-        $like = "%{$q}%";
-
-        // Buscar conductor (y mostramos un mo_taxi de referencia si existe)
-        $rows = DB::table('conductores as c')
-            ->leftJoin('movil as m', 'm.mo_conductor', '=', 'c.conduc_cc')
-            ->where(function ($w) use ($like) {
-                $w->where('c.conduc_nombres', 'like', $like)
-                  ->orWhereRaw('CAST(c.conduc_cc AS CHAR) LIKE ?', [$like]);
-            })
-            ->groupBy('c.conduc_cc', 'c.conduc_nombres')
-            ->orderBy('c.conduc_nombres')
-            ->limit(20)
-            ->selectRaw("
-                c.conduc_cc as cedula,
-                c.conduc_nombres as nombre,
-                MAX(m.mo_id) as last_mo_id
-            ")
-            ->get();
-
-        // Obtener mo_taxi de referencia por cada conductor (usando last_mo_id)
-        $data = [];
-        foreach ($rows as $r) {
-            $movil = null;
-            if (!empty($r->last_mo_id)) {
-                $movil = DB::table('movil')->where('mo_id', $r->last_mo_id)->value('mo_taxi');
-            }
-            $data[] = [
-                'cedula' => $r->cedula,
-                'nombre' => $r->nombre,
-                'movil'  => $movil ?? '—',
-            ];
-        }
-
+    if ($q === '') {
         return response()->json([
             'ok' => true,
-            'data' => $data
+            'data' => []
         ]);
     }
+
+    if (!ctype_digit($q)) {
+        return response()->json([
+            'ok' => false,
+            'data' => [],
+            'message' => 'Ingresa solo números de móvil.'
+        ]);
+    }
+
+    $rows = DB::table('movil as m')
+        ->join('conductores as c', 'c.conduc_cc', '=', 'm.mo_conductor')
+        ->where('m.mo_taxi', (int)$q)
+        ->orderBy('c.conduc_nombres')
+        ->select([
+            'c.conduc_cc as cedula',
+            'c.conduc_nombres as nombre',
+            'm.mo_taxi as movil',
+        ])
+        ->get();
+
+    return response()->json([
+        'ok' => true,
+        'data' => $rows
+    ]);
+}
 
     /**
      * Pagar una o varias facturas

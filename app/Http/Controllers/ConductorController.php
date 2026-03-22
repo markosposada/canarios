@@ -296,14 +296,24 @@ public function buscarConductoresAsignar(Request $request)
 
 public function buscarMovilAjax(Request $request)
 {
-    $movil = $request->input('movil');
+    $movil = trim((string) $request->input('movil', ''));
 
-    $resultados = DB::table('movil')
+    $query = DB::table('movil')
         ->join('conductores', 'movil.mo_conductor', '=', 'conductores.conduc_cc')
-        ->select('movil.mo_id', 'movil.mo_taxi', 'conductores.conduc_nombres', 'movil.mo_estado')
-        ->where('movil.mo_taxi', '=', $movil)
-        
-        ->get();
+        ->select(
+            'movil.mo_id',
+            'movil.mo_taxi',
+            'conductores.conduc_nombres',
+            'movil.mo_estado'
+        )
+        ->orderBy('movil.mo_taxi')
+        ->orderByDesc('movil.mo_id');
+
+    if ($movil !== '') {
+        $query->where('movil.mo_taxi', '=', $movil);
+    }
+
+    $resultados = $query->get();
 
     return response()->json($resultados);
 }
@@ -313,44 +323,80 @@ public function actualizarEstado(Request $request, $id)
 {
     \Log::info("== INICIO actualizarEstado por MÓVIL con mo_id: $id ==");
 
-    $accion = $request->input('accion', 'activar') === 'desactivar' ? 'desactivar' : 'activar';
+    $accion = $request->input('accion', '');
+
+    if (!in_array($accion, ['activar', 'desactivar', 'retirar'])) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Acción inválida.'
+        ], 422);
+    }
 
     return DB::transaction(function () use ($id, $accion) {
-        // Bloqueamos el registro seleccionado
-        $registro = DB::table('movil')->where('mo_id', $id)->lockForUpdate()->first();
+        $registro = DB::table('movil')
+            ->where('mo_id', $id)
+            ->lockForUpdate()
+            ->first();
 
         if (!$registro) {
             \Log::warning("No existe registro movil con mo_id=$id");
-            return response()->json(['success' => false, 'message' => 'Registro no encontrado.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Registro no encontrado.'
+            ], 404);
         }
 
         $movil = $registro->mo_taxi;
 
-        // *** Regla por MÓVIL: solo un ACTIVO por mo_taxi ***
         if ($accion === 'activar') {
-            // (1) Activar el seleccionado
             DB::table('movil')
                 ->where('mo_id', $id)
                 ->update(['mo_estado' => 1]);
 
-            // (2) Desactivar todos los demás del MISMO MÓVIL
             DB::table('movil')
                 ->where('mo_taxi', $movil)
                 ->where('mo_id', '!=', $id)
                 ->where('mo_estado', 1)
                 ->update(['mo_estado' => 2]);
 
-            \Log::info("Activado mo_id=$id en mo_taxi=$movil; otros desactivados");
-            return response()->json(['success' => true, 'accion' => 'activar']);
-        } else {
-            // Desactivar solo este registro
+            \Log::info("Activado mo_id=$id en mo_taxi=$movil; otros activos desactivados");
+
+            return response()->json([
+                'success' => true,
+                'accion' => 'activar'
+            ]);
+        }
+
+        if ($accion === 'desactivar') {
             DB::table('movil')
                 ->where('mo_id', $id)
                 ->update(['mo_estado' => 2]);
 
             \Log::info("Desactivado mo_id=$id en mo_taxi=$movil");
-            return response()->json(['success' => true, 'accion' => 'desactivar']);
+
+            return response()->json([
+                'success' => true,
+                'accion' => 'desactivar'
+            ]);
         }
+
+        if ($accion === 'retirar') {
+            DB::table('movil')
+                ->where('mo_id', $id)
+                ->update(['mo_estado' => 3]);
+
+            \Log::info("Retirado mo_id=$id en mo_taxi=$movil");
+
+            return response()->json([
+                'success' => true,
+                'accion' => 'retirar'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No se pudo procesar la acción.'
+        ], 422);
     });
 }
 

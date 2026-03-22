@@ -292,11 +292,10 @@ class AsignaServicioController extends Controller
                 conductores.conduc_nombres  AS conductor,
                 COALESCE(disponibles.dis_servicio, 1) AS estado,
                 CASE
-                    WHEN COALESCE(disponibles.dis_servicio, 1) = 2 THEN 0
-                    WHEN TIMESTAMP(disponibles.dis_fecha, disponibles.dis_hora) >= DATE_SUB(?, INTERVAL 1 HOUR)
-                        THEN 1
-                    ELSE 0
-                END AS puede_cancelar
+    WHEN TIMESTAMP(disponibles.dis_fecha, disponibles.dis_hora) >= DATE_SUB(?, INTERVAL 20 MINUTE)
+        THEN 1
+    ELSE 0
+END AS puede_cancelar
             ", [$now]);
 
         if ($desde) {
@@ -328,28 +327,176 @@ class AsignaServicioController extends Controller
     }
 
     /** Cancelar: pone dis_servicio = 2 (cancelado) */
-    public function cancelarServicio($id)
-    {
-        $affected = DB::table('disponibles')
-            ->where('dis_id', $id)
-            ->where(function ($w) {
-                $w->whereNull('dis_servicio')->orWhere('dis_servicio', '!=', 2);
-            })
-            ->update(['dis_servicio' => 2]);
+  public function cancelarServicio($id)
+{
+    $tz  = config('app.timezone');
+    $now = Carbon::now($tz)->toDateTimeString();
 
-        return response()->json(['success' => $affected > 0]);
-    }
+    $affected = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->where(function ($w) {
+            $w->whereNull('dis_servicio')->orWhere('dis_servicio', '!=', 2);
+        })
+        ->whereRaw('TIMESTAMP(dis_fecha, dis_hora) >= DATE_SUB(?, INTERVAL 20 MINUTE)', [$now])
+        ->update(['dis_servicio' => 2]);
+
+    return response()->json([
+        'success' => $affected > 0,
+        'message' => $affected > 0
+            ? 'Servicio cancelado.'
+            : 'No se puede cancelar. Ya pasaron más de 20 minutos o ya estaba cancelado.'
+    ]);
+}
 
     /** ✅ NUEVO: Activar de nuevo un servicio cancelado (dis_servicio = 1) */
-    public function activarServicio($id)
-    {
-        $affected = DB::table('disponibles')
-            ->where('dis_id', $id)
-            ->where('dis_servicio', 2)
-            ->update(['dis_servicio' => 1]);
+   public function activarServicio($id)
+{
+    $tz  = config('app.timezone');
+    $now = Carbon::now($tz)->toDateTimeString();
 
-        return response()->json(['success' => $affected > 0]);
+    $affected = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->where('dis_servicio', 2)
+        ->whereRaw('TIMESTAMP(dis_fecha, dis_hora) >= DATE_SUB(?, INTERVAL 30 MINUTE)', [$now])
+        ->update(['dis_servicio' => 1]);
+
+    return response()->json([
+        'success' => $affected > 0,
+        'message' => $affected > 0
+            ? 'Servicio activado.'
+            : 'No se puede activar. Ya pasaron más de 30 minutos o ya estaba activo.'
+    ]);
+}
+
+public function cambiarMovilServicio(Request $request, $id)
+{
+    $request->validate([
+        'nuevo_conmo' => 'required|integer'
+    ]);
+
+    $tz  = config('app.timezone');
+    $now = Carbon::now($tz)->toDateTimeString();
+
+    $servicio = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->first();
+
+    if (!$servicio) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Servicio no encontrado.'
+        ], 404);
     }
+
+    $puedeModificar = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->whereRaw('TIMESTAMP(dis_fecha, dis_hora) >= DATE_SUB(?, INTERVAL 20 MINUTE)', [$now])
+        ->exists();
+
+    if (!$puedeModificar) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Ya pasaron más de 20 minutos. No se puede modificar el servicio.'
+        ]);
+    }
+
+    $movilNuevo = DB::table('movil')
+        ->leftJoin('taxi', 'movil.mo_taxi', '=', 'taxi.ta_movil')
+        ->where('movil.mo_id', $request->nuevo_conmo)
+        ->select(
+            'movil.mo_id',
+            'movil.mo_taxi',
+            'movil.mo_conductor',
+            'taxi.ta_placa'
+        )
+        ->first();
+
+    if (!$movilNuevo) {
+        return response()->json([
+            'success' => false,
+            'message' => 'El móvil seleccionado no existe.'
+        ]);
+    }
+
+    DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->update([
+            'dis_conmo' => $request->nuevo_conmo,
+            'dis_servicio' => 1,
+        ]);
+
+    try {
+        $conductorUser = null;
+
+        if (!empty($movilNuevo->mo_conductor)) {
+            $conductorUser = User::where('cedula', $movilNuevo->mo_conductor)->first();
+        }
+
+        if ($conductorUser) {
+            $conductorUser->notify(new ServicioAsignadoNotification([
+                'servicio_id' => $id,
+                'direccion'   => $servicio->dis_dire,
+                'movil'       => $movilNuevo->mo_taxi ?? null,
+                'placa'       => $movilNuevo->ta_placa ?? null,
+                'token'       => $servicio->dis_token,
+                'operadora'   => $servicio->dis_operadora,
+                'fecha'       => $servicio->dis_fecha,
+                'hora'        => $servicio->dis_hora,
+            ]));
+        }
+
+        if ($conductorUser) {
+            $subs = DB::table('push_subscriptions')
+                ->where('user_id', $conductorUser->id)
+                ->get();
+
+            if ($subs->count() > 0) {
+                $webPush = new WebPush([
+                    'VAPID' => [
+                        'subject'    => 'mailto:soporte@loscanarios.com',
+                        'publicKey'  => config('services.webpush.public_key'),
+                        'privateKey' => config('services.webpush.private_key'),
+                    ],
+                ]);
+
+                foreach ($subs as $s) {
+                    $subscription = Subscription::create([
+                        'endpoint' => $s->endpoint,
+                        'keys' => [
+                            'p256dh' => $s->p256dh,
+                            'auth'   => $s->auth,
+                        ],
+                    ]);
+
+                    $payload = json_encode([
+                        'title' => '🚕 Servicio reasignado',
+                        'body'  => $servicio->dis_dire,
+                        'data'  => [
+                            'url'   => url('/conductor/servicios-asignados'),
+                            'token' => $servicio->dis_token,
+                            'movil' => $movilNuevo->mo_taxi ?? null,
+                        ],
+                    ]);
+
+                    $webPush->queueNotification($subscription, $payload);
+                }
+
+                foreach ($webPush->flush() as $report) {
+                    // opcional: limpiar suscripciones inválidas
+                }
+            }
+        }
+    } catch (\Throwable $e) {
+        report($e);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Móvil cambiado correctamente.',
+        'movil'   => $movilNuevo->mo_taxi ?? null,
+        'placa'   => $movilNuevo->ta_placa ?? null,
+    ]);
+}
 
     public function subirAudio(Request $request)
     {
