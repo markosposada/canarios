@@ -28,6 +28,10 @@ use App\Http\Controllers\Operadora\RecaudoController;
 use App\Http\Controllers\Operadora\RecaudoHistorialController;
 use App\Http\Controllers\Operadora\EstadoConductorControllerOperadora;
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Operadora\ReporteOperadoraController;
+
+
 use App\Http\Controllers\TaxistaController;
 
 use App\Http\Middleware\NoCache;
@@ -136,7 +140,7 @@ Route::get('/api/verificar-placa', function (\Illuminate\Http\Request $request) 
 | VISTAS PRINCIPALES (por rol)
 ========================= */
 
-Route::get('/dashboard', fn () => view('dashboard'))
+Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', RolMiddleware::class . ':operadora,administrador'])
     ->name('dashboard');
 
@@ -208,6 +212,15 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
     ->name('servicios.cambiarMovil');
     
     
+    Route::get('/operadora/resumen-operadoras', [ReporteOperadoraController::class, 'vistaResumenCarreras'])
+    ->name('operadora.resumen_operadoras');
+
+Route::get('/operadora/resumen-operadoras/listar', [ReporteOperadoraController::class, 'listarResumenCarreras'])
+    ->name('operadora.resumen_operadoras.listar');
+
+Route::get('/operadora/resumen-operadoras/operadoras', [ReporteOperadoraController::class, 'listarOperadoras'])
+    ->name('operadora.resumen_operadoras.operadoras');
+
 
     Route::post('/servicios/audio', [AsignaServicioController::class, 'subirAudio'])
         ->name('servicios.audio');
