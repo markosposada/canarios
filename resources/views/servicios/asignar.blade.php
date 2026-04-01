@@ -594,6 +594,10 @@ function getModalMoviles() {
 
 function abrirModalMoviles() {
   $('#modalMoviles').modal('show');
+
+  $('#modalMoviles').on('shown.bs.modal', function () {
+    $('#inpBuscarMovil').focus();
+});
 }
 
 function cerrarModalMoviles() {
@@ -809,7 +813,7 @@ window.seleccionarPendiente = async function(i) {
     abrirModalMoviles();
 
 
-    setTimeout(() => document.getElementById('inpBuscarMovil')?.focus(), 300);
+    
     $('#inpBuscarMovil').val('');
   } catch (e) {
     console.error('Error cargando móviles:', e);
