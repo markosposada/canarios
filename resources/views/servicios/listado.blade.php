@@ -73,6 +73,7 @@
           <th>Hora</th>
           <th class="text-start">Dirección</th>
           <th class="text-start">Usuario</th>
+          <th class="text-start">Operadora</th>
           <th>Token</th>
           <th>Móvil</th>
           <th>Placa</th>
@@ -177,7 +178,7 @@ $('#btnCerrarModalModificar').on('click', function () {
 });
 
 /**
- * Acción:
+ * Acción:.
  * - si venció tiempo => No disponible
  * - si no venció => Modificar
  */
@@ -193,7 +194,7 @@ function pintarTabla(rows) {
   const $tb = $('#tablaServicios tbody').empty();
 
   if (!rows.length) {
-    $tb.append(`<tr><td colspan="10" class="text-muted">No hay registros con los filtros actuales.</td></tr>`);
+    $tb.append(`<tr><td colspan="11" class="text-muted">No hay registros con los filtros actuales.</td></tr>`);
     return;
   }
 
@@ -204,10 +205,15 @@ function pintarTabla(rows) {
         <td>${esc(r.hora)}</td>
         <td class="text-start">${esc(r.direccion)}</td>
         <td class="text-start">${esc(r.usuario)}</td>
+<td class="text-start">${esc(r.operadora).substring(0, 8)}</td>
         <td><span class="token-pill">${esc(r.token)}</span></td>
         <td>${esc(r.movil)}</td>
         <td>${esc(r.placa)}</td>
-        <td class="text-start">${esc(r.conductor)}</td>
+        <td class="text-start">
+  ${esc(r.conductor).length > 10 
+    ? esc(r.conductor).substring(0, 10) + '...' 
+    : esc(r.conductor)}
+</td>
         <td>${badgeEstado(r.estado)}</td>
         <td>${botonAccion(r.id, r.estado, r.puede_cancelar)}</td>
       </tr>
@@ -257,6 +263,14 @@ function pintarCards(rows){
               <div class="svc-v text-left">${esc(r.usuario)}</div>
             </div>
             <div class="svc-kv">
+  <div class="svc-k">Operadora</div>
+  <div class="svc-v text-left">
+  ${esc(r.operadora).length > 8 
+    ? esc(r.operadora).substring(0, 8) + '...' 
+    : esc(r.operadora)}
+</div>
+</div>
+            <div class="svc-kv">
               <div class="svc-k">Móvil</div>
               <div class="svc-v">${esc(r.movil)}</div>
             </div>
@@ -266,7 +280,11 @@ function pintarCards(rows){
             </div>
             <div class="svc-kv">
               <div class="svc-k">Conductor</div>
-              <div class="svc-v text-left">${esc(r.conductor)}</div>
+              <div class="svc-v text-left">
+  ${esc(r.conductor).length > 10 
+    ? esc(r.conductor).substring(0, 10) + '...' 
+    : esc(r.conductor)}
+</div>
             </div>
           </div>
         </div>
@@ -285,7 +303,7 @@ async function cargarTabla() {
   if (h) params.append('hasta', h);
   if (q) params.append('q', q);
 
-  $('#tablaServicios tbody').html('<tr><td colspan="10" class="text-muted">Cargando...</td></tr>');
+  $('#tablaServicios tbody').html('<tr><td colspan="11" class="text-muted">Cargando...</td></tr>');
   $('#listaCards').html(`
     <div class="card svc-card">
       <div class="card-body text-muted">Cargando...</div>
@@ -311,7 +329,7 @@ async function cargarTabla() {
     pintarCards(rows);
   } catch (e) {
     console.error(e);
-    $('#tablaServicios tbody').html('<tr><td colspan="10" class="text-danger">Error al cargar los datos.</td></tr>');
+    $('#tablaServicios tbody').html('<tr><td colspan="11" class="text-danger">Error al cargar los datos.</td></tr>');
     $('#listaCards').html(`
       <div class="card svc-card">
         <div class="card-body text-danger">
