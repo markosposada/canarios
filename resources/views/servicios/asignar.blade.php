@@ -69,55 +69,55 @@
         {{-- ✅ En móvil usa todo el ancho (px-0), en desktop vuelve a padding --}}
         <div class="col-12 col-md-10 col-lg-8 px-0 px-md-2">
 
-            {{-- Usuario --}}
-            <div class="mb-3">
-                <label class="form-label">Cliente / Usuario</label>
-
-                <div class="d-flex align-items-stretch gap-2">
-                    <input type="text" id="inpUsuario" class="form-control" placeholder="Nombre del cliente" autofocus>
-
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm icon-btn"
-                            id="btnMicUsuario"
-                            title="Dictar usuario">
-                        🎤
-                    </button>
-                </div>
-            </div>
-
             {{-- Dirección --}}
-            <div class="mb-3">
-                <label class="form-label">Dirección</label>
+<div class="mb-3">
+    <label class="form-label">Dirección</label>
 
-                {{-- ✅ gap-2 entre input y botones + espacio entre botones --}}
-                <div class="d-flex align-items-stretch gap-2">
-                    <input type="text"
-                           id="inpDireccion"
-                           class="form-control"
-                           placeholder="Calle, No, etc."                           
-                           inputmode="text">
+    <div class="d-flex align-items-stretch gap-2">
+        <input type="text"
+               id="inpDireccion"
+               class="form-control"
+               placeholder="Calle, No, etc."
+               inputmode="text"
+               autofocus>
 
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm icon-btn"
-                            id="btnDictarDireccion"
-                            title="Dictar dirección">
-                        🎤
-                    </button>
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm icon-btn"
+                id="btnDictarDireccion"
+                title="Dictar dirección">
+            🎤
+        </button>
 
-                    <button type="button"
-                            class="btn btn-outline-secondary btn-sm icon-btn"
-                            id="btnGrabarDireccion"
-                            title="Grabar audio de la dirección">
-                        ⏺️
-                    </button>
-                </div>
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm icon-btn"
+                id="btnGrabarDireccion"
+                title="Grabar audio de la dirección">
+            ⏺️
+        </button>
+    </div>
 
-                <input type="hidden" id="direccionAudioPath">
+    <input type="hidden" id="direccionAudioPath">
 
-                <small class="text-muted help-tip d-block mt-1">
-                    Tip: usa 🎤 para dictar o ⏺️ para grabar audio (no al mismo tiempo).
-                </small>
-            </div>
+    <small class="text-muted help-tip d-block mt-1">
+        Tip: usa 🎤 para dictar o ⏺️ para grabar audio (no al mismo tiempo).
+    </small>
+</div>
+
+{{-- Usuario --}}
+<div class="mb-3">
+    <label class="form-label">Cliente / Usuario</label>
+
+    <div class="d-flex align-items-stretch gap-2">
+        <input type="text" id="inpUsuario" class="form-control" placeholder="Nombre del cliente">
+
+        <button type="button"
+                class="btn btn-outline-secondary btn-sm icon-btn"
+                id="btnMicUsuario"
+                title="Dictar usuario">
+            🎤
+        </button>
+    </div>
+</div>
 
             {{-- Botones --}}
             <div class="mt-3 d-flex justify-content-between gap-2">
@@ -719,7 +719,7 @@ function resetFormServicio() {
   $('#inpDireccion').val('');
   $('#direccionAudioPath').val('');
   resetPendingAudio();
-  $('#inpUsuario').focus();
+  $('#inpDireccion').focus();
 }
 
 function renderPendientes() {
@@ -849,7 +849,7 @@ $('#btnLimpiar').on('click', () => {
   }
   $('#inpUsuario, #inpDireccion, #direccionAudioPath').val('');
   resetPendingAudio();
-  $('#inpUsuario').focus();
+  $('#inpDireccion').focus();
 });
 
 /* =========================================================
@@ -953,12 +953,18 @@ async function asignar(mo_id) {
 /* =========================================================
    6) Navegación Enter
    ========================================================= */
-$('#inpUsuario').on('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); $('#inpDireccion').focus(); }
+$('#inpDireccion').on('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#inpUsuario').focus();
+  }
 });
 
-$('#inpDireccion').on('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); $('#btnAgregarServicio').click(); }
+$('#inpUsuario').on('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#btnAgregarServicio').click();
+  }
 });
 
 /* =========================================================
