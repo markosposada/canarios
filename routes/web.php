@@ -210,6 +210,9 @@ Route::middleware(['auth', RolMiddleware::class . ':operadora,administrador'])->
     
     Route::post('/servicios/cambiar-movil/{id}', [AsignaServicioController::class, 'cambiarMovilServicio'])
     ->name('servicios.cambiarMovil');
+
+    Route::post('/servicios/actualizar-datos/{id}', [AsignaServicioController::class, 'actualizarDatosServicio'])
+    ->name('servicios.actualizar_datos');
     
     
     Route::get('/operadora/resumen-operadoras', [ReporteOperadoraController::class, 'vistaResumenCarreras'])

@@ -498,6 +498,52 @@ public function cambiarMovilServicio(Request $request, $id)
     ]);
 }
 
+public function actualizarDatosServicio(Request $request, $id)
+{
+    $request->validate([
+        'direccion' => 'required|string|max:255',
+        'usuario'   => 'required|string|max:200',
+    ]);
+
+    $tz  = config('app.timezone');
+    $now = Carbon::now($tz)->toDateTimeString();
+
+    $servicio = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->first();
+
+    if (!$servicio) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Servicio no encontrado.'
+        ], 404);
+    }
+
+    $puedeModificar = DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->whereRaw('TIMESTAMP(dis_fecha, dis_hora) >= DATE_SUB(?, INTERVAL 20 MINUTE)', [$now])
+        ->exists();
+
+    if (!$puedeModificar) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Ya pasaron más de 20 minutos. No se puede modificar el servicio.'
+        ], 422);
+    }
+
+    DB::table('disponibles')
+        ->where('dis_id', $id)
+        ->update([
+            'dis_dire'    => trim($request->direccion),
+            'dis_usuario' => trim($request->usuario),
+        ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Datos del servicio actualizados correctamente.'
+    ]);
+}
+
     public function subirAudio(Request $request)
     {
         try {

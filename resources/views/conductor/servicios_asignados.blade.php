@@ -24,19 +24,20 @@
     </div>
 </div>
 
-{{-- Tabla --}}
+{{-- Tabla escritorio / Cards móvil --}}
 <div class="row">
     <div class="col-12 grid-margin">
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title">Resumen Servicios</h4>
 
-                <div class="table-responsive">
+                {{-- Vista escritorio --}}
+                <div class="table-responsive d-none d-md-block">
                     <table class="table table-striped" id="tabla-servicios">
                         <thead>
                             <tr>
                                 <th style="width:60px;">#</th>
-                                <th>Movil</th>
+                                <th>Móvil</th>
                                 <th class="col-direccion">Dirección</th>
                                 <th style="min-width:100px;">Fecha</th>
                                 <th style="min-width:80px;">Hora</th>
@@ -52,19 +53,61 @@
                     </table>
                 </div>
 
-                {{-- estilos solo para esta vista --}}
+                {{-- Vista móvil --}}
+                <div class="d-block d-md-none" id="cards-servicios">
+                    <div class="text-center text-muted py-3">Cargando...</div>
+                </div>
+
                 <style>
-                    /* Para que la dirección no vuelva la tabla inmanejable en celular */
-                    #tabla-servicios td.col-direccion, #tabla-servicios th.col-direccion{
+                    #tabla-servicios td.col-direccion,
+                    #tabla-servicios th.col-direccion{
                         max-width: 260px;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
                     }
 
-                    /* Mejor experiencia de scroll en móviles */
                     .table-responsive{
                         -webkit-overflow-scrolling: touch;
+                    }
+
+                    .servicio-card{
+                        border: 1px solid rgba(0,0,0,.08);
+                        border-radius: 14px;
+                        padding: 14px;
+                        margin-bottom: 12px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,.04);
+                        background: #fff;
+                    }
+
+                    .servicio-card-head{
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 10px;
+                        margin-bottom: 10px;
+                    }
+
+                    .servicio-card-num{
+                        font-weight: 700;
+                        font-size: 15px;
+                    }
+
+                    .servicio-card-body .fila{
+                        margin-bottom: 8px;
+                        line-height: 1.25;
+                    }
+
+                    .servicio-card-body .label{
+                        font-weight: 700;
+                        color: #222;
+                        display: block;
+                        margin-bottom: 2px;
+                    }
+
+                    .servicio-card-body .valor{
+                        color: #555;
+                        word-break: break-word;
                     }
                 </style>
 
@@ -107,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return `<span class="badge bg-secondary">DESCONOCIDO</span>`;
     }
 
-    function renderRows(rows, total) {
+    function renderTable(rows, total) {
         const tbody = document.querySelector('#tabla-servicios tbody');
         tbody.innerHTML = '';
 
@@ -121,7 +164,6 @@ document.addEventListener('DOMContentLoaded', function () {
         rows.forEach((r, idx) => {
             const tr = document.createElement('tr');
 
-            // operadora ya viene recortada desde SQL, pero por seguridad la recortamos igual
             const operadoraFull = r.operadora ?? '';
             const operadoraCorta = firstN(operadoraFull, 8);
 
@@ -139,9 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tbody.appendChild(tr);
         });
 
-        // Si DataTables está cargado en tu template, lo activa
         if (window.$ && $.fn.DataTable) {
-            // si ya existe, lo destruimos para volver a pintar sin duplicar
             if ($.fn.DataTable.isDataTable('#tabla-servicios')) {
                 $('#tabla-servicios').DataTable().destroy();
             }
@@ -154,6 +194,59 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function renderCards(rows, total) {
+        const contenedor = document.getElementById('cards-servicios');
+        contenedor.innerHTML = '';
+
+        document.getElementById('totalServicios').textContent = String(total ?? (rows?.length ?? 0));
+
+        if (!rows || rows.length === 0) {
+            contenedor.innerHTML = `<div class="text-center text-muted py-3">No tienes servicios asignados.</div>`;
+            return;
+        }
+
+        rows.forEach((r, idx) => {
+            const operadoraFull = r.operadora ?? '';
+            const operadoraCorta = firstN(operadoraFull, 8);
+
+            contenedor.insertAdjacentHTML('beforeend', `
+                <div class="servicio-card">
+                    <div class="servicio-card-head">
+                        <div class="servicio-card-num">Servicio #${idx + 1}</div>
+                        <div>${renderServicioBadge(r.servicio)}</div>
+                    </div>
+
+                    <div class="servicio-card-body">
+                        <div class="fila">
+                            <span class="label">Móvil</span>
+                            <span class="valor">${escapeHtml(r.movil ?? '')}</span>
+                        </div>
+
+                        <div class="fila">
+                            <span class="label">Dirección</span>
+                            <span class="valor">${escapeHtml(r.direccion ?? '')}</span>
+                        </div>
+
+                        <div class="fila">
+                            <span class="label">Fecha</span>
+                            <span class="valor">${escapeHtml(r.fecha ?? '')}</span>
+                        </div>
+
+                        <div class="fila">
+                            <span class="label">Hora</span>
+                            <span class="valor">${escapeHtml(r.hora ?? '')}</span>
+                        </div>
+
+                        <div class="fila">
+                            <span class="label">Operadora</span>
+                            <span class="valor" title="${escapeHtml(operadoraFull)}">${escapeHtml(operadoraCorta)}</span>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+
     fetch(url, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -161,10 +254,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     })
     .then(res => res.json())
-    .then(json => renderRows(json.data, json.total))
+    .then(json => {
+        renderTable(json.data, json.total);
+        renderCards(json.data, json.total);
+    })
     .catch(() => {
         const tbody = document.querySelector('#tabla-servicios tbody');
         tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">Error cargando servicios.</td></tr>`;
+
+        document.getElementById('cards-servicios').innerHTML =
+            `<div class="text-center text-danger py-3">Error cargando servicios.</div>`;
     });
 });
 </script>

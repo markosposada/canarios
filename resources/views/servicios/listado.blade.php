@@ -103,9 +103,23 @@
           <label class="form-label fw-bold">¿Qué deseas hacer?</label>
           <select id="modAccion" class="form-select">
             <option value="">Seleccione una opción</option>
+            <option value="editar_datos">Modificar dirección / usuario</option>
             <option value="cancelar">Cancelar servicio</option>
             <option value="cambiar_movil">Cambiar móvil</option>
           </select>
+        </div>
+
+        <div id="bloqueEditarDatos" style="display:none;">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Dirección</label>
+              <input type="text" id="modDireccion" class="form-control" maxlength="255" placeholder="Ingrese la dirección">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Usuario</label>
+              <input type="text" id="modUsuario" class="form-control" maxlength="200" placeholder="Ingrese el nombre del usuario">
+            </div>
+          </div>
         </div>
 
         <div id="bloqueCancelar" style="display:none;">
@@ -148,6 +162,9 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btnCerrarModalModificar">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnGuardarDatosServicio" style="display:none;">
+          Guardar cambios
+        </button>
         <button type="button" class="btn btn-danger" id="btnConfirmarCancelar" style="display:none;">
           Confirmar cancelación
         </button>
@@ -164,7 +181,17 @@ $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
 
 let modalModificarServicio = null;
 
-function esc(v){ return (v ?? '').toString(); }
+function esc(v){
+  return (v ?? '').toString();
+}
+
+function escAttr(v){
+  return esc(v)
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
 
 function badgeEstado(estado) {
   if (Number(estado) === 2) return '<span class="badge bg-danger">Cancelado</span>';
@@ -177,17 +204,22 @@ $('#btnCerrarModalModificar').on('click', function () {
   }
 });
 
-/**
- * Acción:.
- * - si venció tiempo => No disponible
- * - si no venció => Modificar
- */
-function botonAccion(id, estado, puede_cancelar) {
+function botonAccion(id, estado, puede_cancelar, direccion, usuario) {
   if (Number(puede_cancelar) === 0) {
     return '<button class="btn btn-sm btn-outline-secondary" disabled title="Tiempo de modificación vencido">No disponible</button>';
   }
 
-  return `<button class="btn btn-sm btn-primary" onclick="abrirModificar(${id}, ${estado})">Modificar</button>`;
+  return `
+    <button
+      type="button"
+      class="btn btn-sm btn-primary btn-modificar-servicio"
+      data-id="${escAttr(id)}"
+      data-estado="${escAttr(estado)}"
+      data-direccion="${encodeURIComponent(direccion ?? '')}"
+      data-usuario="${encodeURIComponent(usuario ?? '')}">
+      Modificar
+    </button>
+  `;
 }
 
 function pintarTabla(rows) {
@@ -205,17 +237,17 @@ function pintarTabla(rows) {
         <td>${esc(r.hora)}</td>
         <td class="text-start">${esc(r.direccion)}</td>
         <td class="text-start">${esc(r.usuario)}</td>
-<td class="text-start">${esc(r.operadora).substring(0, 8)}</td>
+        <td class="text-start">${esc(r.operadora).substring(0, 8)}</td>
         <td><span class="token-pill">${esc(r.token)}</span></td>
         <td>${esc(r.movil)}</td>
         <td>${esc(r.placa)}</td>
         <td class="text-start">
-  ${esc(r.conductor).length > 10 
-    ? esc(r.conductor).substring(0, 10) + '...' 
-    : esc(r.conductor)}
-</td>
+          ${esc(r.conductor).length > 10
+            ? esc(r.conductor).substring(0, 10) + '...'
+            : esc(r.conductor)}
+        </td>
         <td>${badgeEstado(r.estado)}</td>
-        <td>${botonAccion(r.id, r.estado, r.puede_cancelar)}</td>
+        <td>${botonAccion(r.id, r.estado, r.puede_cancelar, r.direccion, r.usuario)}</td>
       </tr>
     `);
   });
@@ -237,7 +269,7 @@ function pintarCards(rows){
 
   rows.forEach(r => {
     const estadoHtml = badgeEstado(r.estado);
-    const accionHtml = botonAccion(r.id, r.estado, r.puede_cancelar);
+    const accionHtml = botonAccion(r.id, r.estado, r.puede_cancelar, r.direccion, r.usuario);
 
     $wrap.append(`
       <div class="card svc-card mb-3">
@@ -263,13 +295,13 @@ function pintarCards(rows){
               <div class="svc-v text-left">${esc(r.usuario)}</div>
             </div>
             <div class="svc-kv">
-  <div class="svc-k">Operadora</div>
-  <div class="svc-v text-left">
-  ${esc(r.operadora).length > 8 
-    ? esc(r.operadora).substring(0, 8) + '...' 
-    : esc(r.operadora)}
-</div>
-</div>
+              <div class="svc-k">Operadora</div>
+              <div class="svc-v text-left">
+                ${esc(r.operadora).length > 8
+                  ? esc(r.operadora).substring(0, 8) + '...'
+                  : esc(r.operadora)}
+              </div>
+            </div>
             <div class="svc-kv">
               <div class="svc-k">Móvil</div>
               <div class="svc-v">${esc(r.movil)}</div>
@@ -281,10 +313,10 @@ function pintarCards(rows){
             <div class="svc-kv">
               <div class="svc-k">Conductor</div>
               <div class="svc-v text-left">
-  ${esc(r.conductor).length > 10 
-    ? esc(r.conductor).substring(0, 10) + '...' 
-    : esc(r.conductor)}
-</div>
+                ${esc(r.conductor).length > 10
+                  ? esc(r.conductor).substring(0, 10) + '...'
+                  : esc(r.conductor)}
+              </div>
             </div>
           </div>
         </div>
@@ -340,13 +372,21 @@ async function cargarTabla() {
   }
 }
 
-function abrirModificar(id, estado) {
+function abrirModificar(id, estado, direccion, usuario) {
   $('#modServicioId').val(id);
   $('#modEstadoActual').val(estado);
+
   $('#modAccion').val('');
+  $('#modDireccion').val(direccion || '');
+  $('#modUsuario').val(usuario || '');
+
   $('#bloqueMoviles').hide();
   $('#bloqueCancelar').hide();
+  $('#bloqueEditarDatos').hide();
+
   $('#btnConfirmarCancelar').hide();
+  $('#btnGuardarDatosServicio').hide();
+
   $('#buscarMovilModal').val('');
   $('#tablaMovilesModal').html(`
     <tr>
@@ -361,12 +401,29 @@ function abrirModificar(id, estado) {
   modalModificarServicio.show();
 }
 
+$(document).on('click', '.btn-modificar-servicio', function () {
+  const id = $(this).data('id');
+  const estado = $(this).data('estado');
+  const direccion = decodeURIComponent($(this).attr('data-direccion') || '');
+  const usuario = decodeURIComponent($(this).attr('data-usuario') || '');
+
+  abrirModificar(id, estado, direccion, usuario);
+});
+
 $('#modAccion').on('change', function () {
   const accion = $(this).val();
 
   $('#bloqueMoviles').hide();
   $('#bloqueCancelar').hide();
+  $('#bloqueEditarDatos').hide();
+
   $('#btnConfirmarCancelar').hide();
+  $('#btnGuardarDatosServicio').hide();
+
+  if (accion === 'editar_datos') {
+    $('#bloqueEditarDatos').show();
+    $('#btnGuardarDatosServicio').show();
+  }
 
   if (accion === 'cancelar') {
     $('#bloqueCancelar').show();
@@ -376,6 +433,69 @@ $('#modAccion').on('change', function () {
   if (accion === 'cambiar_movil') {
     $('#bloqueMoviles').show();
     cargarMovilesModal();
+  }
+});
+
+$('#btnGuardarDatosServicio').on('click', async function () {
+  const id = $('#modServicioId').val();
+  const direccion = $('#modDireccion').val().trim();
+  const usuario = $('#modUsuario').val().trim();
+
+  if (!direccion) {
+    Swal.fire('Falta dirección', 'Debes ingresar la dirección.', 'warning');
+    return;
+  }
+
+  if (!usuario) {
+    Swal.fire('Falta usuario', 'Debes ingresar el usuario.', 'warning');
+    return;
+  }
+
+  const ok = await Swal.fire({
+    icon: 'question',
+    title: 'Guardar cambios',
+    text: '¿Deseas actualizar la dirección y el usuario del servicio?',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, guardar',
+    cancelButtonText: 'No',
+  }).then(r => r.isConfirmed);
+
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`{{ url('/servicios/actualizar-datos') }}/${id}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({
+        direccion: direccion,
+        usuario: usuario
+      })
+    });
+
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      const raw = await res.text();
+      console.error('Respuesta NO JSON:', raw.slice(0, 400));
+      throw new Error('El servidor no devolvió JSON.');
+    }
+
+    const data = await res.json();
+
+    if (data.success) {
+      modalModificarServicio.hide();
+      Swal.fire('Listo', data.message || 'Servicio actualizado.', 'success');
+      cargarTabla();
+    } else {
+      Swal.fire('Sin cambios', data.message || 'No fue posible actualizar el servicio.', 'info');
+    }
+  } catch (e) {
+    console.error(e);
+    Swal.fire('Error', 'No se pudo actualizar la dirección y el usuario.', 'error');
   }
 });
 
