@@ -25,49 +25,99 @@
     default => 'DESCONOCIDO',
   };
 
-  // UI del banner
-  $estadoUI = match ($estado) {
-    1 => [
+  // móvil del conductor (no mostrar retirados)
+  $movilActual = DB::table('movil')
+    ->where('mo_conductor', $cedula)
+    ->where('mo_estado', '!=', 3) // 3 = retirado
+    ->orderByRaw('CASE WHEN mo_estado = 1 THEN 0 ELSE 1 END')
+    ->orderBy('mo_taxi')
+    ->select('mo_id', 'mo_taxi', 'mo_estado')
+    ->first();
+
+  $movilNumero = $movilActual->mo_taxi ?? 'Sin móvil';
+  $movilEstadoNum = (int)($movilActual->mo_estado ?? 0);
+
+  $movilEstado = match ($movilEstadoNum) {
+    1 => 'ACTIVO',
+    2 => 'INACTIVO',
+    default => 'SIN MÓVIL',
+  };
+
+  // Mensaje del chip móvil según combinación real
+  $movilChipUI = match (true) {
+    ($estado === 1 && $movilEstadoNum === 1) => [
+      'icon' => 'mdi-taxi',
+      'bg' => 'rgba(255,255,255,.18)',
+      'border' => 'rgba(255,255,255,.22)',
+      'text' => '#ffffff',
+      'msg' => 'Estás habilitado para recibir servicios.',
+    ],
+    ($movilEstadoNum === 2) => [
+      'icon' => 'mdi-taxi-off',
+      'bg' => 'rgba(127,29,29,.92)',
+      'border' => 'rgba(255,255,255,.18)',
+      'text' => '#ffffff',
+      'msg' => 'Tu móvil está INACTIVO. Estás inhabilitado para recibir servicios.',
+    ],
+    ($estado !== 1) => [
+      'icon' => 'mdi-account-off',
+      'bg' => 'rgba(51,65,85,.88)',
+      'border' => 'rgba(255,255,255,.18)',
+      'text' => '#ffffff',
+      'msg' => 'No puedes recibir servicios debido a tu estado actual.',
+    ],
+    default => [
+      'icon' => 'mdi-help-circle',
+      'bg' => 'rgba(51,65,85,.88)',
+      'border' => 'rgba(255,255,255,.18)',
+      'text' => '#ffffff',
+      'msg' => 'No se encontró un móvil disponible para operar.',
+    ],
+  };
+
+  // Color principal de la card
+  $estadoUI = match (true) {
+    in_array($estado, [3,5]) => [
+      'icon' => 'mdi-alert-decagram',
+      'grad' => 'linear-gradient(135deg,#7f1d1d 0%,#ef4444 55%,#f87171 100%)',
+      'border' => 'rgba(239,68,68,.35)',
+      'msg' => 'Tu cuenta tiene restricciones. Debes acercarte a la oficina.',
+    ],
+    ($estado === 4) => [
+      'icon' => 'mdi-account-cancel',
+      'grad' => 'linear-gradient(135deg,#000000 0%,#374151 55%,#111827 100%)',
+      'border' => 'rgba(0,0,0,.5)',
+      'msg' => 'Tu estado es RETIRADO. No puedes operar.',
+    ],
+    ($estado === 1 && $movilEstadoNum === 1) => [
       'icon' => 'mdi-check-decagram',
       'grad' => 'linear-gradient(135deg,#0f766e 0%,#22c55e 55%,#86efac 100%)',
       'border' => 'rgba(34,197,94,.35)',
       'msg' => 'Estás habilitado para recibir servicios.',
     ],
-    2 => [
-      'icon' => 'mdi-close-octagon',
-      'grad' => 'linear-gradient(135deg,#7f1d1d 0%,#ef4444 55%,#fb7185 100%)',
-      'border' => 'rgba(239,68,68,.35)',
-      'msg' => 'Estás inactivo. No deberían asignarte servicios.',
-    ],
-    3 => [
-      'icon' => 'mdi-alert-decagram',
-      'grad' => 'linear-gradient(135deg,#7c2d12 0%,#f97316 55%,#fde68a 100%)',
-      'border' => 'rgba(249,115,22,.35)',
-      'msg' => 'Tu cuenta está SANCIONADA. Debes acercarte a la oficina principal.',
-    ],
-    4 => [
-      'icon' => 'mdi-account-cancel',
-      'grad' => 'linear-gradient(135deg,#111827 0%,#6b7280 55%,#374151 100%)',
+    ($movilEstadoNum === 2) => [
+      'icon' => 'mdi-taxi-off',
+      'grad' => 'linear-gradient(135deg,#1f2937 0%,#6b7280 55%,#9ca3af 100%)',
       'border' => 'rgba(107,114,128,.35)',
-      'msg' => 'Tu estado figura como RETIRADO. Debes acercarte a la oficina principal.',
+      'msg' => 'Tu móvil está inactivo. No recibirás servicios.',
     ],
-    5 => [
-      'icon' => 'mdi-shield-alert',
-      'grad' => 'linear-gradient(135deg,#4c1d95 0%,#7c3aed 55%,#c4b5fd 100%)',
-      'border' => 'rgba(124,58,237,.35)',
-      'msg' => 'Tu cuenta está EVADIDA. Debes acercarte a la oficina principal.',
+    ($estado === 2) => [
+      'icon' => 'mdi-close-octagon',
+      'grad' => 'linear-gradient(135deg,#1f2937 0%,#6b7280 55%,#9ca3af 100%)',
+      'border' => 'rgba(107,114,128,.35)',
+      'msg' => 'Estás inactivo. No deberías recibir servicios.',
     ],
     default => [
       'icon' => 'mdi-help-circle',
       'grad' => 'linear-gradient(135deg,#334155 0%,#64748b 55%,#94a3b8 100%)',
       'border' => 'rgba(100,116,139,.35)',
-      'msg' => 'No se pudo determinar tu estado. Comunícate con la oficina.',
+      'msg' => 'Estado no definido.',
     ],
   };
 
   $bloqueado = in_array($estado, [3,4,5], true);
 
-  // Hoy en Bogotá (para comparar con dis_fecha)
+  // Hoy en Bogotá
   $hoy = now()->setTimezone('America/Bogota')->format('Y-m-d');
 
   // Último servicio
@@ -105,12 +155,23 @@
 @endphp
 
 <style>
-  /* ===== Banner estado ===== */
+  .estado-link{
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
   .estado-hero{
     border-radius: 18px;
     overflow: hidden;
     border: 1px solid rgba(0,0,0,.06);
     box-shadow: 0 10px 26px rgba(0,0,0,.10);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+
+  .estado-link:hover .estado-hero{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0,0,0,.14);
   }
 
   .estado-hero .wrap{
@@ -166,6 +227,9 @@
     text-align:right;
     min-width: 160px;
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .estado-hero .icon{
@@ -174,7 +238,135 @@
     filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
   }
 
-  /* ✅ Ajuste para móvil: evita que se “monten” los textos */
+  .estado-hero .cta{
+    margin-top: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    opacity: .95;
+  }
+
+  .movil-uber-box{
+    position: relative;
+    min-width: 150px;
+    padding: 14px 20px;
+    border-radius: 28px;
+    text-align: center;
+    color: #fff;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.28);
+    box-shadow:
+      0 10px 30px rgba(0,0,0,.18),
+      inset 0 1px 0 rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow: hidden;
+  }
+
+  .movil-uber-box::before{
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.03));
+    pointer-events: none;
+  }
+
+  .movil-uber-label{
+    position: relative;
+    z-index: 1;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    opacity: .95;
+    margin-bottom: 8px;
+  }
+
+  .movil-uber-number{
+    position: relative;
+    z-index: 1;
+    font-size: 78px;
+    line-height: .95;
+    font-weight: 900;
+    letter-spacing: -1px;
+    text-shadow: 0 6px 20px rgba(0,0,0,.18);
+  }
+
+  .movil-uber-active{
+    animation: movilPulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes movilPulse{
+    0%{
+      transform: translateY(0) scale(1);
+      box-shadow:
+        0 10px 30px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.18);
+    }
+    50%{
+      transform: translateY(-2px) scale(1.02);
+      box-shadow:
+        0 16px 38px rgba(0,0,0,.22),
+        0 0 0 6px rgba(255,255,255,.06),
+        inset 0 1px 0 rgba(255,255,255,.22);
+    }
+    100%{
+      transform: translateY(0) scale(1);
+      box-shadow:
+        0 10px 30px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.18);
+    }
+  }
+
+  .table thead th{ white-space: nowrap; }
+
+  .dash-link{
+    text-decoration:none;
+    color:inherit;
+    display:block;
+  }
+
+  .dash-card{
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(15,23,42,.08);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+
+  .dash-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15,23,42,.12);
+  }
+
+  .dash-title{
+    font-size: 14px;
+  }
+
+  .dash-sub{
+    color:#6b7280;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .dash-icon{
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #f3f4f6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex: 0 0 56px;
+  }
+
+  .mini-pill{
+    display:inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background:#f3f4f6;
+    border:1px solid rgba(0,0,0,.06);
+    font-weight:700;
+  }
+
   @media (max-width: 576px){
     .estado-hero .wrap{
       padding: 16px 14px;
@@ -208,6 +400,21 @@
     .estado-hero .sub{
       font-size: 13px;
     }
+
+    .movil-uber-box{
+      min-width: 120px;
+      padding: 12px 16px;
+      border-radius: 24px;
+    }
+
+    .movil-uber-label{
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .movil-uber-number{
+      font-size: 62px;
+    }
   }
 </style>
 
@@ -218,42 +425,70 @@
   </div>
 </div>
 
-{{-- ===== Banner llamativo (lo primero que ven) ===== --}}
 <div class="row mb-3">
   <div class="col-12">
-   <div class="estado-hero">
-  <div class="wrap d-flex justify-content-between flex-wrap"
-       style="background: {{ $estadoUI['grad'] }}; border-bottom: 1px solid {{ $estadoUI['border'] }};">
-    <div class="flex-grow-1" style="min-width:0;">
-      <div class="chip">
-        <i class="mdi {{ $estadoUI['icon'] }}" style="font-size:18px;"></i>
-        ESTADO: {{ $estadoTexto }}
-      </div>
+    <a href="{{ route('conductor.moviles') }}" class="estado-link">
+      <div class="estado-hero">
+        <div class="wrap d-flex justify-content-between flex-wrap"
+             style="background: {{ $estadoUI['grad'] }}; border-bottom: 1px solid {{ $estadoUI['border'] }};">
+          <div class="flex-grow-1" style="min-width:0;">
+            <div class="chip">
+              <i class="mdi {{ $estadoUI['icon'] }}" style="font-size:18px;"></i>
+              ESTADO CONDUCTOR: {{ $estadoTexto }}
+            </div>
 
+            <div class="chip mt-2"
+                 style="background: {{ $movilChipUI['bg'] }}; border-color: {{ $movilChipUI['border'] }}; color: {{ $movilChipUI['text'] }};">
+              <i class="mdi {{ $movilChipUI['icon'] }}" style="font-size:18px;"></i>
+              ESTADO MÓVIL: {{ $movilEstado }}
+            </div>
 
-       <p class="sub mb-0">
-        Conductor: <strong>{{ $conductor->conduc_nombres }}</strong>
-      </p>
+            <p class="sub mb-0 mt-3">
+              Conductor: <strong>{{ $conductor->conduc_nombres }}</strong>
+            </p>
 
-      <p class="sub mb-0">
-        Cédula: <strong>{{ $cedula }}</strong>
-      </p>
+            <p class="sub mb-0">
+              Cédula: <strong>{{ $cedula }}</strong>
+            </p>
 
-      <div class="hint">
-        {{ $estadoUI['msg'] }}
-        @if($bloqueado)
-          <div class="mt-1" style="font-weight:800;">
-            ⛔ Estado bloqueado: no podrás operar ni recibir servicios.
+            <p class="sub mb-0 mt-2">
+              Móvil: <strong>{{ $movilNumero }}</strong>
+            </p>
+
+            <p class="sub mb-0">
+              Estado móvil: <strong>{{ $movilEstado }}</strong>
+            </p>
+
+            <div class="hint">
+              {{ $estadoUI['msg'] }}
+
+              <div class="mt-2" style="font-weight:800;">
+                {{ $movilChipUI['msg'] }}
+              </div>
+
+              @if($bloqueado)
+                <div class="mt-2" style="font-weight:800;">
+                  ⛔ Estado bloqueado: no podrás operar ni recibir servicios.
+                </div>
+              @endif
+            </div>
+
+            <div class="cta">
+              Toca para administrar tu móvil
+            </div>
           </div>
-        @endif
-      </div>
-    </div>
 
-    <div class="right">
-      <i class="mdi {{ $estadoUI['icon'] }} icon"></i>
-    </div>
-  </div>
-</div>
+          <div class="right">
+            @if($movilEstadoNum === 1)
+              <div class="movil-uber-box movil-uber-active">
+                <div class="movil-uber-label">Móvil</div>
+                <div class="movil-uber-number">{{ $movilNumero }}</div>
+              </div>
+            @endif
+          </div>
+        </div>
+      </div>
+    </a>
   </div>
 </div>
 
@@ -274,23 +509,6 @@
           </div>
           <div class="dash-icon">
             <i class="mdi mdi-map-marker mdi-28px text-info"></i>
-          </div>
-        </div>
-      </div>
-    </a>
-  </div>
-
-  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-    <a class="dash-link" href="{{ route('conductor.moviles') }}">
-      <div class="card dash-card">
-        <div class="card-body d-flex align-items-center justify-content-between">
-          <div>
-            <p class="mb-1 text-muted dash-title">Mis móviles</p>
-            <h5 class="mb-0">Activar / desactivar</h5>
-            <p class="dash-sub mt-1">Activa o desactiva el móvil</p>
-          </div>
-          <div class="dash-icon">
-            <i class="mdi mdi-toggle-switch text-success"></i>
           </div>
         </div>
       </div>
@@ -337,8 +555,6 @@
     </a>
   </div>
 
-
-  
   <button onclick="verPush()">Ver estado push</button>
 
 <script>
@@ -354,12 +570,8 @@ async function verPush(){
 }
 </script>
 
-
-  {{-- ... el resto de tus tarjetas igual ... --}}
-
 </div>
 
-{{-- ✅ MODAL Push (Bootstrap 4) --}}
 <div class="modal fade" id="modalPush" tabindex="-1" role="dialog" aria-labelledby="modalPushLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document" style="max-width:520px;">
     <div class="modal-content">
@@ -397,7 +609,6 @@ async function verPush(){
 
 @section('scripts')
 <script>
-  // ✅ tu script existente para Servicios Hoy
   (function(){
     const hoy = "{{ $hoy }}";
     const el = document.getElementById('serviciosHoy');
@@ -417,7 +628,6 @@ async function verPush(){
 </script>
 
 <script>
-  // ✅ Modal push - se muestra solo una vez y solo si permission == "default"
   (function pushModalOnce(){
     const KEY = 'push_modal_prompted_once';
 
