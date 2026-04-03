@@ -19,6 +19,38 @@
   .table-responsive{ -webkit-overflow-scrolling: touch; }
   .kpi-box { border-radius: 12px; border: 1px solid rgba(0,0,0,.08); }
 
+  .box-fechas{
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 10px;
+    padding: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+  }
+
+    .box-fechas .form-check{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .box-fechas .form-check-input{
+    position: static !important;
+    margin: 0 !important;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    accent-color: #0d6efd;
+    cursor: pointer;
+  }
+
+  .box-fechas .form-check-label{
+    margin: 0;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
   /* modal */
   .modal-backdrop-custom{
     position: fixed; inset:0; background: rgba(0,0,0,.45);
@@ -47,8 +79,8 @@
         <h4 class="card-title mb-3">Seleccionar conductor</h4>
 
         <button class="btn btn-primary w-100" id="btnModalConductor" type="button">
-  <i class="mdi mdi-account-search mr-1"></i> Buscar conductor o móvil
-</button>
+          <i class="mdi mdi-account-search mr-1"></i> Buscar conductor o móvil
+        </button>
 
         <div id="msg" class="mt-3"></div>
 
@@ -59,10 +91,25 @@
           <p class="mb-1"><strong>Conductor:</strong> <span id="infoConductor"></span></p>
           <p class="mb-1"><strong>Cédula:</strong> <span id="infoCc"></span></p>
           <p class="mb-1"><strong>Valor servicio:</strong> $<span id="infoValorServicio"></span></p>
+
+          <hr>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">Días pendientes a facturar</h6>
+            <button class="btn btn-sm btn-light" type="button" id="btnMarcarTodos" disabled>Marcar todos</button>
+          </div>
+
+          <div id="contenedorFechas" class="box-fechas">
+            <div class="text-muted">Seleccione un conductor primero</div>
+          </div>
+
+          <button class="btn btn-info w-100 mt-3" id="btnAplicarFechas" type="button" disabled>
+            VER PENDIENTES SELECCIONADOS
+          </button>
         </div>
 
         <button class="btn btn-success w-100 mt-3" id="btnFacturar" type="button" disabled>
-          FACTURAR TODO
+          FACTURAR DÍAS SELECCIONADOS
         </button>
       </div>
     </div>
@@ -177,6 +224,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const urlFacturar  = "{{ route('operadora.facturacion.facturar') }}";
 
   const btnFacturar = document.getElementById('btnFacturar');
+  const btnAplicarFechas = document.getElementById('btnAplicarFechas');
+  const btnMarcarTodos = document.getElementById('btnMarcarTodos');
   const msg = document.getElementById('msg');
 
   const infoMovil = document.getElementById('infoMovil');
@@ -186,6 +235,8 @@ document.addEventListener('DOMContentLoaded', function(){
   const infoValorServicio = document.getElementById('infoValorServicio');
   const kValorServ = document.getElementById('kValorServ');
 
+  const contenedorFechas = document.getElementById('contenedorFechas');
+
   const tBodyServ = document.querySelector('#tablaServicios tbody');
   const tBodySanc = document.querySelector('#tablaSanciones tbody');
 
@@ -194,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function(){
   const tSanc = document.getElementById('tSanc');
   const tTotal = document.getElementById('tTotal');
 
-  // modal
   const modalBack = document.getElementById('modalBack');
   const btnModalConductor = document.getElementById('btnModalConductor');
   const btnCerrarModal = document.getElementById('btnCerrarModal');
@@ -224,17 +274,77 @@ document.addEventListener('DOMContentLoaded', function(){
     setTimeout(()=>msg.innerHTML='', 4000);
   }
 
-  function render(data){
+  function limpiarTotalesYTablas(texto = 'Selecciona días pendientes'){
+    tBodyServ.innerHTML = `<tr><td colspan="3" class="text-muted text-center">${texto}</td></tr>`;
+    tBodySanc.innerHTML = `<tr><td colspan="4" class="text-muted text-center">${texto}</td></tr>`;
+    tCantServ.textContent = '0';
+    tServ.textContent = '0';
+    tSanc.textContent = '0';
+    tTotal.textContent = '0';
+    btnFacturar.disabled = true;
+  }
+
+  function obtenerFechasSeleccionadas(){
+    return Array.from(document.querySelectorAll('.check-fecha:checked')).map(el => el.value);
+  }
+
+  function actualizarBotonesChecklist(){
+    const totalChecks = document.querySelectorAll('.check-fecha').length;
+    const seleccionadas = obtenerFechasSeleccionadas();
+
+    btnAplicarFechas.disabled = totalChecks === 0;
+    btnMarcarTodos.disabled = totalChecks === 0;
+
+    if (totalChecks > 0 && seleccionadas.length === totalChecks) {
+      btnMarcarTodos.textContent = 'Desmarcar todos';
+    } else {
+      btnMarcarTodos.textContent = 'Marcar todos';
+    }
+
+    btnFacturar.disabled = true;
+  }
+
+  function llenarChecklistFechas(fechas = []){
+    contenedorFechas.innerHTML = '';
+
+    if (!fechas.length) {
+      contenedorFechas.innerHTML = `<div class="text-muted">No hay días pendientes</div>`;
+      btnAplicarFechas.disabled = true;
+      btnMarcarTodos.disabled = true;
+      btnFacturar.disabled = true;
+      limpiarTotalesYTablas('No hay pendientes');
+      return;
+    }
+
+    fechas.forEach(f => {
+      const safeId = 'fecha_' + String(f).replaceAll('-', '_');
+            contenedorFechas.insertAdjacentHTML('beforeend', `
+        <div class="form-check mb-2">
+          <input class="form-check-input check-fecha" type="checkbox" value="${esc(f)}" id="${esc(safeId)}">
+          <label class="form-check-label" for="${esc(safeId)}">${esc(f)}</label>
+        </div>
+      `);
+    });
+
+    document.querySelectorAll('.check-fecha').forEach(chk => {
+      chk.addEventListener('change', actualizarBotonesChecklist);
+    });
+
+    actualizarBotonesChecklist();
+    limpiarTotalesYTablas();
+  }
+
+  function renderInfo(data){
     infoMovil.style.display = 'block';
     infoMo.textContent = data.movil.mo_taxi;
     infoConductor.textContent = data.movil.conductor_nombre;
     infoCc.textContent = data.movil.conductor_cc;
     infoValorServicio.textContent = data.valor_servicio;
     kValorServ.textContent = data.valor_servicio;
-
     currentCedula = String(data.movil.conductor_cc || '');
+  }
 
-    // Servicios
+  function renderPendientes(data){
     tBodyServ.innerHTML = '';
     if (!data.servicios.length){
       tBodyServ.innerHTML = `<tr><td colspan="3" class="text-muted text-center">No hay servicios pendientes</td></tr>`;
@@ -252,7 +362,6 @@ document.addEventListener('DOMContentLoaded', function(){
       });
     }
 
-    // Sanciones
     tBodySanc.innerHTML = '';
     if (!data.sanciones.length){
       tBodySanc.innerHTML = `<tr><td colspan="4" class="text-muted text-center">No hay sanciones activas pendientes</td></tr>`;
@@ -280,48 +389,106 @@ document.addEventListener('DOMContentLoaded', function(){
     btnFacturar.disabled = !hayPendientes;
   }
 
-  function fetchPendientesPorCedula(cedula){
-    btnFacturar.disabled = true;
-    tBodyServ.innerHTML = `<tr><td colspan="3" class="text-muted text-center">Cargando...</td></tr>`;
-    tBodySanc.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Cargando...</td></tr>`;
+  function construirUrlPendientes(cedula, fechas = []){
+    let url = urlPendCc + '?cedula=' + encodeURIComponent(cedula);
+    fechas.forEach(f => {
+      url += '&fechas[]=' + encodeURIComponent(f);
+    });
+    return url;
+  }
 
-    fetch(urlPendCc + '?cedula=' + encodeURIComponent(cedula), {
+  function cargarFechasPendientes(cedula){
+    limpiarTotalesYTablas('Cargando...');
+    fetch(construirUrlPendientes(cedula), {
       headers: {'X-Requested-With':'XMLHttpRequest'}
     })
     .then(r => r.json().then(j => ({ok:r.ok, j})))
     .then(({ok, j}) => {
       if(!ok || !j.ok) throw new Error(j.message || 'Error consultando.');
-      render(j);
+      renderInfo(j);
+      llenarChecklistFechas(j.fechas_pendientes || []);
     })
     .catch(e => {
       infoMovil.style.display = 'none';
       btnFacturar.disabled = true;
+      btnAplicarFechas.disabled = true;
+      btnMarcarTodos.disabled = true;
+      contenedorFechas.innerHTML = `<div class="text-danger">Error cargando días pendientes</div>`;
+      limpiarTotalesYTablas('Sin datos');
       showMsg('❌ ' + (e.message || 'Error'), 'alert alert-danger');
     });
   }
 
-  // modal
+  function cargarPendientesSeleccionados(){
+    const fechas = obtenerFechasSeleccionadas();
+
+    if(!currentCedula){
+      showMsg('⚠️ Primero selecciona un conductor.', 'alert alert-warning');
+      return;
+    }
+
+    if(!fechas.length){
+      showMsg('⚠️ Selecciona al menos un día pendiente.', 'alert alert-warning');
+      return;
+    }
+
+    tBodyServ.innerHTML = `<tr><td colspan="3" class="text-muted text-center">Cargando...</td></tr>`;
+    tBodySanc.innerHTML = `<tr><td colspan="4" class="text-muted text-center">Cargando...</td></tr>`;
+    btnFacturar.disabled = true;
+
+    fetch(construirUrlPendientes(currentCedula, fechas), {
+      headers: {'X-Requested-With':'XMLHttpRequest'}
+    })
+    .then(r => r.json().then(j => ({ok:r.ok, j})))
+    .then(({ok, j}) => {
+      if(!ok || !j.ok) throw new Error(j.message || 'Error consultando.');
+      renderInfo(j);
+      renderPendientes(j);
+    })
+    .catch(e => {
+      limpiarTotalesYTablas('Error al cargar');
+      showMsg('❌ ' + (e.message || 'Error'), 'alert alert-danger');
+    });
+  }
+
   function abrirModal(){
     modalBack.style.display = 'flex';
     resultados.innerHTML = '';
     buscadorConductor.value = '';
     setTimeout(()=> buscadorConductor.focus(), 50);
   }
-  function cerrarModal(){ modalBack.style.display = 'none'; }
+
+  function cerrarModal(){
+    modalBack.style.display = 'none';
+  }
 
   btnModalConductor.addEventListener('click', abrirModal);
   btnCerrarModal.addEventListener('click', cerrarModal);
   modalBack.addEventListener('click', (e)=>{ if(e.target === modalBack) cerrarModal(); });
 
+  btnAplicarFechas.addEventListener('click', cargarPendientesSeleccionados);
+
+  btnMarcarTodos.addEventListener('click', function(){
+    const checks = Array.from(document.querySelectorAll('.check-fecha'));
+    if (!checks.length) return;
+
+    const todasMarcadas = checks.every(chk => chk.checked);
+    checks.forEach(chk => chk.checked = !todasMarcadas);
+
+    actualizarBotonesChecklist();
+  });
+
   let tmr = null;
   buscadorConductor.addEventListener('input', function(){
     clearTimeout(tmr);
     const q = buscadorConductor.value.trim();
-    
+
     resultados.innerHTML = `<div class="small-muted">Buscando móvil...</div>`;
 
     tmr = setTimeout(() => {
-      fetch(urlBuscarCon + '?q=' + encodeURIComponent(q), { headers: {'X-Requested-With':'XMLHttpRequest'} })
+      fetch(urlBuscarCon + '?q=' + encodeURIComponent(q), {
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+      })
       .then(r => r.json())
       .then(j => {
         const rows = j.data || [];
@@ -329,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function(){
           resultados.innerHTML = `<div class="small-muted">No hay resultados.</div>`;
           return;
         }
+
         resultados.innerHTML = '';
         rows.forEach(r => {
           resultados.insertAdjacentHTML('beforeend', `
@@ -342,8 +510,14 @@ document.addEventListener('DOMContentLoaded', function(){
         document.querySelectorAll('.result-item').forEach(item => {
           item.addEventListener('click', function(){
             const cc = item.getAttribute('data-cc');
+
+            contenedorFechas.innerHTML = `<div class="text-muted">Cargando días pendientes...</div>`;
+            btnAplicarFechas.disabled = true;
+            btnMarcarTodos.disabled = true;
+            btnFacturar.disabled = true;
+
             cerrarModal();
-            fetchPendientesPorCedula(cc);
+            cargarFechasPendientes(cc);
           });
         });
       })
@@ -351,10 +525,17 @@ document.addEventListener('DOMContentLoaded', function(){
     }, 250);
   });
 
-  // facturar
   btnFacturar.addEventListener('click', function(){
     if(!currentCedula) return;
-    if(!confirm('¿Confirmas facturar TODO lo pendiente de este conductor?')) return;
+
+    const fechas = obtenerFechasSeleccionadas();
+
+    if(!fechas.length){
+      showMsg('⚠️ Selecciona al menos un día pendiente.', 'alert alert-warning');
+      return;
+    }
+
+    if(!confirm('¿Confirmas facturar lo pendiente de los días seleccionados?')) return;
 
     btnFacturar.disabled = true;
 
@@ -365,13 +546,16 @@ document.addEventListener('DOMContentLoaded', function(){
         'Content-Type':'application/json',
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
       },
-      body: JSON.stringify({ cedula: currentCedula })
+      body: JSON.stringify({
+        cedula: currentCedula,
+        fechas: fechas
+      })
     })
     .then(r => r.json().then(j => ({ok:r.ok, j})))
     .then(({ok, j}) => {
       if(!ok || !j.ok) throw new Error(j.message || 'No se pudo facturar.');
       showMsg('✅ Facturado correctamente. Comprobante #' + j.fo_id + ' | Total $' + j.total, 'alert alert-success');
-      fetchPendientesPorCedula(currentCedula); // recargar
+      cargarFechasPendientes(currentCedula);
     })
     .catch(e => showMsg('❌ ' + (e.message || 'Error'), 'alert alert-danger'))
     .finally(() => btnFacturar.disabled = false);

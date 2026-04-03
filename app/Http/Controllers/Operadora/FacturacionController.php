@@ -23,7 +23,6 @@ class FacturacionController extends Controller
      */
     private function resolverMoIdPorConductor(string $cc): ?int
     {
-        // 1) Si hay servicios pendientes, ese mo_id es el correcto
         $moId = DB::table('disponibles as d')
             ->join('movil as m', 'm.mo_id', '=', 'd.dis_conmo')
             ->where('m.mo_conductor', $cc)
@@ -35,7 +34,6 @@ class FacturacionController extends Controller
 
         if ($moId) return (int)$moId;
 
-        // 2) Fallback: último mo_id del conductor
         $moId = DB::table('movil')
             ->where('mo_conductor', $cc)
             ->orderByDesc('mo_id')
@@ -45,11 +43,40 @@ class FacturacionController extends Controller
     }
 
     /**
-     * ✅ Pendientes POR CÉDULA (igual a recaudo)
+     * Normaliza arreglo de fechas recibido por query o body
+     */
+    private function normalizarFechas($fechas): array
+    {
+        if (is_string($fechas)) {
+            $decoded = json_decode($fechas, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $fechas = $decoded;
+            } else {
+                $fechas = [$fechas];
+            }
+        }
+
+        if (!is_array($fechas)) {
+            $fechas = [];
+        }
+
+        return collect($fechas)
+            ->filter()
+            ->map(fn($f) => trim((string)$f))
+            ->filter(fn($f) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $f))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * ✅ Pendientes POR CÉDULA y por múltiples días
      */
     public function pendientesPorCedula(Request $request)
     {
         $cc = trim($request->query('cedula', ''));
+        $fechas = $this->normalizarFechas($request->query('fechas', []));
+
         if ($cc === '') {
             return response()->json(['ok' => false, 'message' => 'Debes ingresar la cédula.'], 422);
         }
@@ -63,27 +90,51 @@ class FacturacionController extends Controller
             return response()->json(['ok' => false, 'message' => 'Conductor no encontrado.'], 404);
         }
 
-        // ✅ mo_id correcto (sin exigir activo)
         $moId = $this->resolverMoIdPorConductor($cc);
 
-        // móvil referencia (para mostrar)
         $movilTaxi = DB::table('movil')
             ->where('mo_conductor', $cc)
             ->orderByDesc('mo_id')
             ->value('mo_taxi');
 
-        // valor servicio (fecha más actual)
         $valorServicio = (int) (DB::table('valorservicio')
             ->orderByDesc('fecha')
             ->value('vs_valor') ?? 0);
 
-        // Servicios pendientes (solo aceptados)
-        $servicios = collect();
+        $fechasServicios = collect();
         if ($moId) {
+            $fechasServicios = DB::table('disponibles as d')
+                ->where('d.dis_conmo', $moId)
+                ->where('d.dis_servicio', 1)
+                ->where('d.dis_facturado', 0)
+                ->select('d.dis_fecha')
+                ->distinct()
+                ->pluck('d.dis_fecha');
+        }
+
+        $fechasSanciones = DB::table('sancion as s')
+            ->where('s.sancion_condu', $cc)
+            ->where('s.sancion_activa', 1)
+            ->where('s.sancion_facturada', 0)
+            ->select('s.sancion_fecha')
+            ->distinct()
+            ->pluck('s.sancion_fecha');
+
+        $fechasPendientes = $fechasServicios
+            ->merge($fechasSanciones)
+            ->filter()
+            ->map(fn($f) => (string)$f)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $servicios = collect();
+        if ($moId && !empty($fechas)) {
             $servicios = DB::table('disponibles as d')
                 ->where('d.dis_conmo', $moId)
                 ->where('d.dis_servicio', 1)
                 ->where('d.dis_facturado', 0)
+                ->whereIn('d.dis_fecha', $fechas)
                 ->orderByDesc('d.dis_fecha')
                 ->orderByDesc('d.dis_hora')
                 ->select([
@@ -97,24 +148,28 @@ class FacturacionController extends Controller
                 ->get();
         }
 
-        // ✅ Sanciones pendientes (SOLO ACTIVAS)
-        $sanciones = DB::table('sancion as s')
-            ->join('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
-            ->where('s.sancion_condu', $cc)
-            ->where('s.sancion_activa', 1)
-            ->where('s.sancion_facturada', 0)
-            ->orderByDesc('s.sancion_id')
-            ->select([
-                's.sancion_id',
-                's.sancion_fecha',
-                's.sancion_hora',
-                's.sancion_operadora',
-                's.sancion_activa',
-                't.tpsa_sancion as tipo',
-                't.tpsa_valor as valor',
-                't.tpsa_horas as horas',
-            ])
-            ->get();
+        $sanciones = collect();
+        if (!empty($fechas)) {
+            $sanciones = DB::table('sancion as s')
+                ->join('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
+                ->where('s.sancion_condu', $cc)
+                ->where('s.sancion_activa', 1)
+                ->where('s.sancion_facturada', 0)
+                ->whereIn('s.sancion_fecha', $fechas)
+                ->orderByDesc('s.sancion_fecha')
+                ->orderByDesc('s.sancion_hora')
+                ->select([
+                    's.sancion_id',
+                    's.sancion_fecha',
+                    's.sancion_hora',
+                    's.sancion_operadora',
+                    's.sancion_activa',
+                    't.tpsa_sancion as tipo',
+                    't.tpsa_valor as valor',
+                    't.tpsa_horas as horas',
+                ])
+                ->get();
+        }
 
         $totalServicios = $servicios->count() * $valorServicio;
         $totalSanciones = (int) $sanciones->sum('valor');
@@ -123,13 +178,14 @@ class FacturacionController extends Controller
         return response()->json([
             'ok' => true,
             'movil' => [
-                'mo_id' => $moId,                       // puede ser null si no hay móvil
+                'mo_id' => $moId,
                 'mo_taxi' => $movilTaxi ?? '—',
                 'conductor_cc' => $conductor->conduc_cc,
                 'conductor_nombre' => $conductor->conduc_nombres,
                 'conductor_estado' => (int)$conductor->conduc_estado,
             ],
             'valor_servicio' => $valorServicio,
+            'fechas_pendientes' => $fechasPendientes,
             'servicios' => $servicios,
             'sanciones' => $sanciones,
             'totales' => [
@@ -142,62 +198,69 @@ class FacturacionController extends Controller
     }
 
     /**
-     * ✅ Buscar conductores por nombre o cédula (para modal) - SIN exigir móvil activo
+     * ✅ Buscar conductores por móvil
      */
     public function buscarConductores(Request $request)
-{
-    $q = trim($request->query('q', ''));
+    {
+        $q = trim($request->query('q', ''));
 
-    if ($q === '') {
-        return response()->json(['ok' => true, 'data' => []]);
-    }
+        if ($q === '') {
+            return response()->json(['ok' => true, 'data' => []]);
+        }
 
-    // Solo permitir números (móvil)
-    if (!ctype_digit($q)) {
+        if (!ctype_digit($q)) {
+            return response()->json([
+                'ok' => false,
+                'data' => [],
+                'message' => 'Ingrese solo números de móvil.'
+            ]);
+        }
+
+        $rows = DB::table('movil as m')
+            ->join('conductores as c', 'c.conduc_cc', '=', 'm.mo_conductor')
+            ->where('m.mo_taxi', (int)$q)
+            ->orderBy('c.conduc_nombres')
+            ->select([
+                'c.conduc_cc as cedula',
+                'c.conduc_nombres as nombre',
+                'm.mo_taxi as movil',
+            ])
+            ->get();
+
         return response()->json([
-            'ok' => false,
-            'data' => [],
-            'message' => 'Ingrese solo números de móvil.'
+            'ok' => true,
+            'data' => $rows,
         ]);
     }
 
-    $rows = DB::table('movil as m')
-        ->join('conductores as c', 'c.conduc_cc', '=', 'm.mo_conductor')
-        ->where('m.mo_taxi', (int)$q)
-        ->orderBy('c.conduc_nombres')
-        ->select([
-            'c.conduc_cc as cedula',
-            'c.conduc_nombres as nombre',
-            'm.mo_taxi as movil',
-        ])
-        ->get();
-
-    return response()->json([
-        'ok' => true,
-        'data' => $rows,
-    ]);
-}
-
     /**
-     * ✅ Facturar TODO por cédula (sin tocar el insert)
-     * Nota: lo único distinto es que ahora recibimos "cedula"
+     * ✅ Facturar múltiples días seleccionados
      */
     public function facturar(Request $request)
     {
         $request->validate([
             'cedula' => 'required|string|max:50',
+            'fechas' => 'required|array|min:1',
+            'fechas.*' => 'required|date',
         ]);
 
         $cc = trim($request->cedula);
+        $fechas = $this->normalizarFechas($request->fechas);
+
+        if (empty($fechas)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Debes seleccionar al menos un día válido.',
+            ], 422);
+        }
+
         $now = Carbon::now('America/Bogota');
         $operadora = Auth::user()->name ?? Auth::user()->email ?? 'OPERADORA';
 
-        return DB::transaction(function () use ($cc, $now, $operadora) {
+        return DB::transaction(function () use ($cc, $fechas, $now, $operadora) {
 
-            // ✅ mo_id correcto (recalcular dentro de la transacción)
             $moId = $this->resolverMoIdPorConductor($cc);
 
-            // conductor
             $conductor = DB::table('conductores')
                 ->where('conduc_cc', $cc)
                 ->select('conduc_cc', 'conduc_nombres')
@@ -208,7 +271,6 @@ class FacturacionController extends Controller
                 return response()->json(['ok' => false, 'message' => 'Conductor no encontrado.'], 404);
             }
 
-            // móvil referencia (para guardar en cabecera, igual que antes)
             $movilTaxi = DB::table('movil')
                 ->where('mo_conductor', $cc)
                 ->orderByDesc('mo_id')
@@ -218,23 +280,23 @@ class FacturacionController extends Controller
                 ->orderByDesc('fecha')
                 ->value('vs_valor') ?? 0);
 
-            // IDs de servicios pendientes (del mo_id correcto)
             $servicios = collect();
             if ($moId) {
                 $servicios = DB::table('disponibles')
                     ->where('dis_conmo', $moId)
                     ->where('dis_servicio', 1)
                     ->where('dis_facturado', 0)
+                    ->whereIn('dis_fecha', $fechas)
                     ->lockForUpdate()
                     ->pluck('dis_id');
             }
 
-            // ✅ Sanciones pendientes (SOLO ACTIVAS) del conductor real
             $sanciones = DB::table('sancion as s')
                 ->join('tiposancion as t', 't.tpsa_id', '=', 's.sancion_tipo')
                 ->where('s.sancion_condu', $cc)
                 ->where('s.sancion_activa', 1)
                 ->where('s.sancion_facturada', 0)
+                ->whereIn('s.sancion_fecha', $fechas)
                 ->lockForUpdate()
                 ->select('s.sancion_id', 't.tpsa_valor')
                 ->get();
@@ -246,11 +308,10 @@ class FacturacionController extends Controller
             if ($servicios->count() === 0 && $sanciones->count() === 0) {
                 return response()->json([
                     'ok' => false,
-                    'message' => 'No hay pendientes para facturar.',
+                    'message' => 'No hay pendientes para facturar en los días seleccionados.',
                 ], 422);
             }
 
-            // ✅ INSERT (no lo cambiamos de lógica, solo el móvil puede ser '—' si no existe)
             $foId = DB::table('facturacion_operadora')->insertGetId([
                 'fo_movil' => (int)($movilTaxi ?? 0),
                 'fo_conductor' => $cc,
