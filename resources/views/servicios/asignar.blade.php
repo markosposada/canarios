@@ -747,9 +747,10 @@ function renderPendientes() {
           </td>
           <td class="text-center">${audioTxt}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-success me-2" onclick="seleccionarPendiente(${i})">Asignar</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="quitarPendiente(${i})">Quitar</button>
-          </td>
+  <button class="btn btn-sm btn-success me-2" onclick="seleccionarPendiente(${i})">Asignar</button>
+  <button class="btn btn-sm btn-warning me-2" onclick="duplicarPendiente(${i})">Duplicar</button>
+  <button class="btn btn-sm btn-outline-danger" onclick="quitarPendiente(${i})">Quitar</button>
+</td>
         </tr>
       `);
     });
@@ -780,9 +781,10 @@ function renderPendientes() {
           <span class="badge bg-light text-dark" style="border:1px solid #e9ecef">${audioTxt}</span>
 
           <div class="pend-actions">
-            <button class="btn btn-success btn-sm" onclick="seleccionarPendiente(${i})">Asignar</button>
-            <button class="btn btn-outline-danger btn-sm" onclick="quitarPendiente(${i})">Quitar</button>
-          </div>
+  <button class="btn btn-success btn-sm" onclick="seleccionarPendiente(${i})">Asignar</button>
+  <button class="btn btn-warning btn-sm" onclick="duplicarPendiente(${i})">Duplicar</button>
+  <button class="btn btn-outline-danger btn-sm" onclick="quitarPendiente(${i})">Quitar</button>
+</div>
         </div>
       </div>
     `);
@@ -791,6 +793,31 @@ function renderPendientes() {
 
 
 function quitarPendiente(i) { pendientes.splice(i, 1); savePendientes(); renderPendientes(); }
+
+function duplicarPendiente(i) {
+  const original = pendientes[i];
+
+  if (!original) return;
+
+  // Clonar el objeto
+  const copia = {
+    usuario: original.usuario,
+    direccion: original.direccion,
+    audio_path: original.audio_path
+  };
+
+  pendientes.push(copia);
+  savePendientes();
+  renderPendientes();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Duplicado',
+    text: 'Servicio duplicado correctamente',
+    timer: 800,
+    showConfirmButton: false
+  });
+}
 
 window.seleccionarPendiente = async function(i) {
   if (dir_rec_isRecording || dir_dict_listening) {
