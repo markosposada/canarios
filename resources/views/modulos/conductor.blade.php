@@ -555,18 +555,134 @@
     </a>
   </div>
 
-  <button onclick="verPush()">Ver estado push</button>
+  <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
+  <div class="card dash-card">
+    <div class="card-body">
+      <p class="mb-2 text-muted dash-title">Notificaciones push</p>
+
+      <div class="d-flex flex-column gap-2">
+        <button type="button" class="btn btn-outline-primary mb-2" onclick="verPush()">
+          Ver estado push
+        </button>
+
+        <button type="button" class="btn btn-primary" onclick="testPush()">
+          Probar activar push
+        </button>
+      </div>
+
+      <div id="pushTestResult" class="mt-3"></div>
+    </div>
+  </div>
+</div>
 
 <script>
-async function verPush(){
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
+async function verPush() {
+  try {
+    if (!('serviceWorker' in navigator)) {
+      alert('Este navegador no soporta Service Worker');
+      return;
+    }
 
-  alert(
-    "Permiso: " + Notification.permission +
-    "\nSuscripción: " + (sub ? "SI" : "NO") +
-    "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
-  );
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+
+    alert(
+      "Permiso: " + Notification.permission +
+      "\nSuscripción: " + (sub ? "SI" : "NO") +
+      "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
+    );
+  } catch (e) {
+    console.error(e);
+    alert('Error revisando estado push: ' + e.message);
+  }
+}
+
+async function testPush() {
+  const box = document.getElementById('pushTestResult');
+
+  try {
+    if (box) {
+      box.innerHTML = '<div class="alert alert-info mb-0">Iniciando prueba…</div>';
+    }
+
+    if (!('Notification' in window)) {
+      throw new Error('Este navegador no soporta notificaciones');
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      throw new Error('Este navegador no soporta Service Worker');
+    }
+
+    if (!('PushManager' in window)) {
+      throw new Error('Este navegador no soporta Push API');
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      throw new Error('Permiso no concedido: ' + permission);
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+
+    if (!sub) {
+      const publicKey = @json(config('services.webpush.public_key'));
+
+      if (!publicKey) {
+        throw new Error('No existe la clave pública WEBPUSH_PUBLIC_KEY');
+      }
+
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+
+    console.log('Suscripción creada/encontrada:', sub);
+
+    if (box) {
+      box.innerHTML = `
+        <div class="alert alert-success mb-2">
+          Suscripción OK
+        </div>
+        <div class="small text-muted" style="word-break:break-all;">
+          <strong>Permiso:</strong> ${Notification.permission}<br>
+          <strong>Endpoint:</strong> ${sub.endpoint}
+        </div>
+      `;
+    }
+
+    alert('Suscripción creada correctamente');
+  } catch (e) {
+    console.error(e);
+
+    if (box) {
+      box.innerHTML = `
+        <div class="alert alert-danger mb-2">
+          Error al activar push
+        </div>
+        <div class="small text-muted">
+          ${e.message}
+        </div>
+      `;
+    }
+
+    alert('Error: ' + e.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
 }
 </script>
 
