@@ -175,15 +175,6 @@
     gap: 14px;
   }
 
-  .estado-hero .big{
-    font-weight: 900;
-    letter-spacing: .4px;
-    font-size: 22px;
-    line-height: 1.15;
-    margin: 10px 0 0 0;
-    word-break: break-word;
-  }
-
   .estado-hero .sub{
     opacity:.92;
     margin: 6px 0 0 0;
@@ -224,12 +215,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .estado-hero .icon{
-    font-size: 54px;
-    opacity: .95;
-    filter: drop-shadow(0 10px 18px rgba(0,0,0,.25));
   }
 
   .estado-hero .cta{
@@ -311,8 +296,6 @@
     }
   }
 
-  .table thead th{ white-space: nowrap; }
-
   .dash-link{
     text-decoration:none;
     color:inherit;
@@ -374,25 +357,6 @@
       min-width: 0;
       margin-top: 6px;
       opacity: .9;
-    }
-
-    .estado-hero .icon{
-      font-size: 44px;
-    }
-
-    .estado-hero .chip{
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .estado-hero .big{
-      font-size: 20px;
-      margin-top: 10px;
-    }
-
-    .estado-hero .sub{
-      font-size: 13px;
     }
 
     .movil-uber-box{
@@ -551,19 +515,20 @@
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
     <div class="card dash-card">
       <div class="card-body">
-        <p class="mb-2 text-muted dash-title">Notificaciones push</p>
+        <p class="mb-1 text-muted dash-title">Notificaciones</p>
+        <p class="dash-sub mb-3">
+          Actívalas para recibir avisos cuando tengas servicios asignados.
+        </p>
 
-        <div class="d-flex flex-column gap-2">
-          <button type="button" class="btn btn-outline-primary mb-2" onclick="verPush()">
-            Ver estado push
-          </button>
-
-          <button type="button" class="btn btn-primary" onclick="testPush()">
-            Probar activar push
-          </button>
+        <div id="pushStatusBox">
+          <div class="alert alert-secondary mb-3">
+            Puedes activar las notificaciones en este dispositivo.
+          </div>
         </div>
 
-        <div id="pushTestResult" class="mt-3"></div>
+        <button type="button" class="btn btn-primary btn-block" onclick="activarPushUsuario()">
+          Activar notificaciones
+        </button>
       </div>
     </div>
   </div>
@@ -622,44 +587,38 @@
       });
   })();
 
-  async function verPush() {
-    try {
-      if (!('serviceWorker' in navigator)) {
-        alert('Este navegador no soporta Service Worker');
-        return;
-      }
+  function renderPushStatus(type, message) {
+    const box = document.getElementById('pushStatusBox');
+    if (!box) return;
 
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
+    const classes = {
+      success: 'alert alert-success mb-3',
+      danger: 'alert alert-danger mb-3',
+      warning: 'alert alert-warning mb-3',
+      info: 'alert alert-info mb-3',
+      secondary: 'alert alert-secondary mb-3'
+    };
 
-      alert(
-        "Permiso: " + Notification.permission +
-        "\nSuscripción: " + (sub ? "SI" : "NO") +
-        "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
-      );
-    } catch (e) {
-      console.error(e);
-      alert('Error revisando estado push: ' + e.message);
-    }
+    box.innerHTML = `<div class="${classes[type] || classes.info}">${message}</div>`;
   }
 
   async function enablePushNotifications() {
     if (!('Notification' in window)) {
-      throw new Error('Este navegador no soporta notificaciones');
+      throw new Error('Este dispositivo no permite notificaciones.');
     }
 
     if (!('serviceWorker' in navigator)) {
-      throw new Error('Este navegador no soporta Service Worker');
+      throw new Error('Este dispositivo no permite notificaciones.');
     }
 
     if (!('PushManager' in window)) {
-      throw new Error('Este navegador no soporta Push API');
+      throw new Error('Este dispositivo no permite notificaciones.');
     }
 
     const permission = await Notification.requestPermission();
 
     if (permission !== 'granted') {
-      throw new Error('Permiso no concedido: ' + permission);
+      throw new Error('Debes permitir las notificaciones para recibir avisos.');
     }
 
     const reg = await navigator.serviceWorker.ready;
@@ -669,7 +628,7 @@
       const publicKey = @json(config('services.webpush.public_key'));
 
       if (!publicKey) {
-        throw new Error('No existe la clave pública WEBPUSH_PUBLIC_KEY');
+        throw new Error('No fue posible activar las notificaciones en este momento.');
       }
 
       sub = await reg.pushManager.subscribe({
@@ -699,52 +658,22 @@
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || 'No se pudo guardar la suscripción en el servidor');
+      throw new Error(result.message || 'No se pudo completar la activación.');
     }
 
     return { sub, result };
   }
 
-  async function testPush() {
-    const box = document.getElementById('pushTestResult');
-
+  async function activarPushUsuario() {
     try {
-      if (box) {
-        box.innerHTML = '<div class="alert alert-info mb-0">Iniciando prueba…</div>';
-      }
+      renderPushStatus('info', 'Activando notificaciones...');
 
-      const { sub } = await enablePushNotifications();
+      await enablePushNotifications();
 
-      console.log('Suscripción creada/encontrada:', sub);
-
-      if (box) {
-        box.innerHTML = `
-          <div class="alert alert-success mb-2">
-            Suscripción OK y guardada en servidor
-          </div>
-          <div class="small text-muted" style="word-break:break-all;">
-            <strong>Permiso:</strong> ${Notification.permission}<br>
-            <strong>Endpoint:</strong> ${sub.endpoint}
-          </div>
-        `;
-      }
-
-      alert('Suscripción creada y guardada correctamente');
+      renderPushStatus('success', '¡Listo! Ya recibirás notificaciones cuando tengas servicios asignados.');
     } catch (e) {
       console.error(e);
-
-      if (box) {
-        box.innerHTML = `
-          <div class="alert alert-danger mb-2">
-            Error al activar push
-          </div>
-          <div class="small text-muted">
-            ${e.message}
-          </div>
-        `;
-      }
-
-      alert('Error: ' + e.message);
+      renderPushStatus('warning', e.message || 'No se pudieron activar las notificaciones.');
     }
   }
 
@@ -786,14 +715,16 @@
       const btnEnable = document.getElementById('btnPushEnable');
       btnEnable?.addEventListener('click', async () => {
         const msg = document.getElementById('pushModalMsg');
-        if (msg) msg.innerHTML = '<div class="alert alert-info mb-0">Activando…</div>';
+        if (msg) msg.innerHTML = '<div class="alert alert-info mb-0">Activando notificaciones...</div>';
 
         try {
           await enablePushNotifications();
 
           if (msg) {
-            msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Notificaciones activadas.</div>';
+            msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Ya recibirás avisos de nuevos servicios.</div>';
           }
+
+          renderPushStatus('success', 'Notificaciones activas. Recibirás avisos de nuevos servicios.');
 
           setTimeout(() => {
             if (window.$) $('#modalPush').modal('hide');
@@ -802,7 +733,7 @@
         } catch (e) {
           console.error(e);
           if (msg) {
-            msg.innerHTML = `<div class="alert alert-danger mb-0">${e.message}</div>`;
+            msg.innerHTML = `<div class="alert alert-warning mb-0">${e.message || 'No se pudieron activar las notificaciones.'}</div>`;
           }
         }
       }, { once: true });
