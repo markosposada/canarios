@@ -25,10 +25,9 @@
     default => 'DESCONOCIDO',
   };
 
-  // móvil del conductor (no mostrar retirados)
   $movilActual = DB::table('movil')
     ->where('mo_conductor', $cedula)
-    ->where('mo_estado', '!=', 3) // 3 = retirado
+    ->where('mo_estado', '!=', 3)
     ->orderByRaw('CASE WHEN mo_estado = 1 THEN 0 ELSE 1 END')
     ->orderBy('mo_taxi')
     ->select('mo_id', 'mo_taxi', 'mo_estado')
@@ -43,7 +42,6 @@
     default => 'SIN MÓVIL',
   };
 
-  // Mensaje del chip móvil según combinación real
   $movilChipUI = match (true) {
     ($estado === 1 && $movilEstadoNum === 1) => [
       'icon' => 'mdi-taxi',
@@ -75,7 +73,6 @@
     ],
   };
 
-  // Color principal de la card
   $estadoUI = match (true) {
     in_array($estado, [3,5]) => [
       'icon' => 'mdi-alert-decagram',
@@ -117,10 +114,8 @@
 
   $bloqueado = in_array($estado, [3,4,5], true);
 
-  // Hoy en Bogotá
   $hoy = now()->setTimezone('America/Bogota')->format('Y-m-d');
 
-  // Último servicio
   $taxisConductor = DB::table('movil')
     ->where('mo_conductor', $cedula)
     ->pluck('mo_id');
@@ -136,7 +131,6 @@
       ->first();
   }
 
-  // Facturación 5 días
   $desdeFact = now()->setTimezone('America/Bogota')->subDays(5)->format('Y-m-d');
 
   $fact = DB::table('facturacion_operadora as fo')
@@ -493,7 +487,6 @@
 </div>
 
 <div class="row">
-
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
     <a class="dash-link" href="{{ route('conductor.ultimo_servicio') }}">
       <div class="card dash-card">
@@ -556,136 +549,24 @@
   </div>
 
   <div class="col-12 col-sm-6 col-lg-3 grid-margin stretch-card">
-  <div class="card dash-card">
-    <div class="card-body">
-      <p class="mb-2 text-muted dash-title">Notificaciones push</p>
+    <div class="card dash-card">
+      <div class="card-body">
+        <p class="mb-2 text-muted dash-title">Notificaciones push</p>
 
-      <div class="d-flex flex-column gap-2">
-        <button type="button" class="btn btn-outline-primary mb-2" onclick="verPush()">
-          Ver estado push
-        </button>
+        <div class="d-flex flex-column gap-2">
+          <button type="button" class="btn btn-outline-primary mb-2" onclick="verPush()">
+            Ver estado push
+          </button>
 
-        <button type="button" class="btn btn-primary" onclick="testPush()">
-          Probar activar push
-        </button>
+          <button type="button" class="btn btn-primary" onclick="testPush()">
+            Probar activar push
+          </button>
+        </div>
+
+        <div id="pushTestResult" class="mt-3"></div>
       </div>
-
-      <div id="pushTestResult" class="mt-3"></div>
     </div>
   </div>
-</div>
-
-<script>
-async function verPush() {
-  try {
-    if (!('serviceWorker' in navigator)) {
-      alert('Este navegador no soporta Service Worker');
-      return;
-    }
-
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-
-    alert(
-      "Permiso: " + Notification.permission +
-      "\nSuscripción: " + (sub ? "SI" : "NO") +
-      "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
-    );
-  } catch (e) {
-    console.error(e);
-    alert('Error revisando estado push: ' + e.message);
-  }
-}
-
-async function testPush() {
-  const box = document.getElementById('pushTestResult');
-
-  try {
-    if (box) {
-      box.innerHTML = '<div class="alert alert-info mb-0">Iniciando prueba…</div>';
-    }
-
-    if (!('Notification' in window)) {
-      throw new Error('Este navegador no soporta notificaciones');
-    }
-
-    if (!('serviceWorker' in navigator)) {
-      throw new Error('Este navegador no soporta Service Worker');
-    }
-
-    if (!('PushManager' in window)) {
-      throw new Error('Este navegador no soporta Push API');
-    }
-
-    const permission = await Notification.requestPermission();
-
-    if (permission !== 'granted') {
-      throw new Error('Permiso no concedido: ' + permission);
-    }
-
-    const reg = await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-
-    if (!sub) {
-      const publicKey = @json(config('services.webpush.public_key'));
-
-      if (!publicKey) {
-        throw new Error('No existe la clave pública WEBPUSH_PUBLIC_KEY');
-      }
-
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey)
-      });
-    }
-
-    console.log('Suscripción creada/encontrada:', sub);
-
-    if (box) {
-      box.innerHTML = `
-        <div class="alert alert-success mb-2">
-          Suscripción OK
-        </div>
-        <div class="small text-muted" style="word-break:break-all;">
-          <strong>Permiso:</strong> ${Notification.permission}<br>
-          <strong>Endpoint:</strong> ${sub.endpoint}
-        </div>
-      `;
-    }
-
-    alert('Suscripción creada correctamente');
-  } catch (e) {
-    console.error(e);
-
-    if (box) {
-      box.innerHTML = `
-        <div class="alert alert-danger mb-2">
-          Error al activar push
-        </div>
-        <div class="small text-muted">
-          ${e.message}
-        </div>
-      `;
-    }
-
-    alert('Error: ' + e.message);
-  }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-
-  return outputArray;
-}
-</script>
-
 </div>
 
 <div class="modal fade" id="modalPush" tabindex="-1" role="dialog" aria-labelledby="modalPushLabel" aria-hidden="true">
@@ -720,7 +601,6 @@ function urlBase64ToUint8Array(base64String) {
     </div>
   </div>
 </div>
-
 @endsection
 
 @section('scripts')
@@ -741,9 +621,146 @@ function urlBase64ToUint8Array(base64String) {
         el.textContent = '0';
       });
   })();
-</script>
 
-<script>
+  async function verPush() {
+    try {
+      if (!('serviceWorker' in navigator)) {
+        alert('Este navegador no soporta Service Worker');
+        return;
+      }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+
+      alert(
+        "Permiso: " + Notification.permission +
+        "\nSuscripción: " + (sub ? "SI" : "NO") +
+        "\nEndpoint: " + (sub ? sub.endpoint : "ninguno")
+      );
+    } catch (e) {
+      console.error(e);
+      alert('Error revisando estado push: ' + e.message);
+    }
+  }
+
+  async function enablePushNotifications() {
+    if (!('Notification' in window)) {
+      throw new Error('Este navegador no soporta notificaciones');
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      throw new Error('Este navegador no soporta Service Worker');
+    }
+
+    if (!('PushManager' in window)) {
+      throw new Error('Este navegador no soporta Push API');
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      throw new Error('Permiso no concedido: ' + permission);
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+
+    if (!sub) {
+      const publicKey = @json(config('services.webpush.public_key'));
+
+      if (!publicKey) {
+        throw new Error('No existe la clave pública WEBPUSH_PUBLIC_KEY');
+      }
+
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+
+    const jsonSub = sub.toJSON();
+
+    const response = await fetch(@json(route('conductor.push.subscribe')), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': @json(csrf_token()),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({
+        endpoint: jsonSub.endpoint,
+        keys: {
+          p256dh: jsonSub.keys.p256dh,
+          auth: jsonSub.keys.auth
+        }
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'No se pudo guardar la suscripción en el servidor');
+    }
+
+    return { sub, result };
+  }
+
+  async function testPush() {
+    const box = document.getElementById('pushTestResult');
+
+    try {
+      if (box) {
+        box.innerHTML = '<div class="alert alert-info mb-0">Iniciando prueba…</div>';
+      }
+
+      const { sub } = await enablePushNotifications();
+
+      console.log('Suscripción creada/encontrada:', sub);
+
+      if (box) {
+        box.innerHTML = `
+          <div class="alert alert-success mb-2">
+            Suscripción OK y guardada en servidor
+          </div>
+          <div class="small text-muted" style="word-break:break-all;">
+            <strong>Permiso:</strong> ${Notification.permission}<br>
+            <strong>Endpoint:</strong> ${sub.endpoint}
+          </div>
+        `;
+      }
+
+      alert('Suscripción creada y guardada correctamente');
+    } catch (e) {
+      console.error(e);
+
+      if (box) {
+        box.innerHTML = `
+          <div class="alert alert-danger mb-2">
+            Error al activar push
+          </div>
+          <div class="small text-muted">
+            ${e.message}
+          </div>
+        `;
+      }
+
+      alert('Error: ' + e.message);
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+
+    return outputArray;
+  }
+
   (function pushModalOnce(){
     const KEY = 'push_modal_prompted_once';
 
@@ -772,13 +789,11 @@ function urlBase64ToUint8Array(base64String) {
         if (msg) msg.innerHTML = '<div class="alert alert-info mb-0">Activando…</div>';
 
         try {
-          if (typeof enablePushNotifications !== 'function') {
-            throw new Error('enablePushNotifications() no está definida.');
-          }
-
           await enablePushNotifications();
 
-          if (msg) msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Notificaciones activadas.</div>';
+          if (msg) {
+            msg.innerHTML = '<div class="alert alert-success mb-0">¡Listo! Notificaciones activadas.</div>';
+          }
 
           setTimeout(() => {
             if (window.$) $('#modalPush').modal('hide');
@@ -786,7 +801,9 @@ function urlBase64ToUint8Array(base64String) {
 
         } catch (e) {
           console.error(e);
-          if (msg) msg.innerHTML = '<div class="alert alert-danger mb-0">No se pudo activar. Intenta nuevamente.</div>';
+          if (msg) {
+            msg.innerHTML = `<div class="alert alert-danger mb-0">${e.message}</div>`;
+          }
         }
       }, { once: true });
     });
